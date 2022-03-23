@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\src\\DongBot\\DongBot\\DongBot.csproj": {}
+    "C:\\src\\DongBot\\APITestConsole\\APITestConsole.csproj": {}
   },
   "projects": {
-    "C:\\src\\DongBot\\DongBot\\DongBot.csproj": {
+    "C:\\src\\DongBot\\APITestConsole\\APITestConsole.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\src\\DongBot\\DongBot\\DongBot.csproj",
-        "projectName": "DongBot",
-        "projectPath": "C:\\src\\DongBot\\DongBot\\DongBot.csproj",
+        "projectUniqueName": "C:\\src\\DongBot\\APITestConsole\\APITestConsole.csproj",
+        "projectName": "APITestConsole",
+        "projectPath": "C:\\src\\DongBot\\APITestConsole\\APITestConsole.csproj",
         "packagesPath": "C:\\Users\\davyd\\.nuget\\packages\\",
-        "outputPath": "C:\\src\\DongBot\\DongBot\\obj\\",
+        "outputPath": "C:\\src\\DongBot\\APITestConsole\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -43,12 +43,6 @@
       "frameworks": {
         "net6.0": {
           "targetAlias": "net6.0",
-          "dependencies": {
-            "Discord.Net": {
-              "target": "Package",
-              "version": "[3.4.1, )"
-            }
-          },
           "imports": [
             "net461",
             "net462",

@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 
 namespace DongBot
 {
-    class Program
+    class MainDong
     {
         public static void Main(string[] args)
-        => new Program().MainAsync().GetAwaiter().GetResult();
+        => new MainDong().MainAsync().GetAwaiter().GetResult();
 
         private DiscordSocketClient _client;
         private Random rand = new Random();
@@ -103,23 +103,28 @@ namespace DongBot
                 "https://tenor.com/view/freddie-freeman-braves-atlanta-gif-13390407"
             };
 
+        private string[] jiggyArray =
+            {
+                "https://www.youtube.com/watch?v=3JcmQONgXJM"
+            };
+
         public async Task MainAsync()
         {
-            _client = new DiscordSocketClient();
-            _client.MessageReceived += CommandHandler;
-            _client.Log += Log;
+            this._client = new DiscordSocketClient();
+            this._client.MessageReceived += this.CommandHandler;
+            this._client.Log += this.Log;
 
             //  You can assign your bot token to a string, and pass that in to connect.
             //  This is, however, insecure, particularly if you plan to have your code hosted in a public repository.
-            var token = File.ReadAllText("token.txt");
+            string token = File.ReadAllText("token.txt");
 
             //  Some alternate options would be to keep your token in an Environment Variable or a standalone file.
             //  var token = Environment.GetEnvironmentVariable("NameOfYourEnvironmentVariable");
             //  var token = File.ReadAllText("token.txt");
             //  var token = JsonConvert.DeserializedObject<AConfigurationClass>(File.ReadAllText("config.json")).Token;
 
-            await _client.LoginAsync(TokenType.Bot, token);
-            await _client.StartAsync();
+            await this._client.LoginAsync(TokenType.Bot, token);
+            await this._client.StartAsync();
 
             //  Block this task until the program is closed.
             await Task.Delay(-1);
@@ -137,16 +142,24 @@ namespace DongBot
             int lengthOfCommand = -1;
 
             //Filtering messages begin here
-            if (!message.Content.StartsWith('!')) //This is your prefix
+            if ( !message.Content.StartsWith('!') ) //This is your prefix
+            {
                 return Task.CompletedTask;
-            
-            if (message.Author.IsBot) //This ignores all bots
-                return Task.CompletedTask;
+            }
 
-            if (message.Content.Contains(' '))
+            if ( message.Author.IsBot ) //This ignores all bots
+            {
+                return Task.CompletedTask;
+            }
+
+            if ( message.Content.Contains(' ') )
+            {
                 lengthOfCommand = message.Content.IndexOf(' ');
+            }
             else
+            {
                 lengthOfCommand = message.Content.Length;
+            }
 
             command = message.Content.Substring(1, lengthOfCommand - 1);
 
@@ -156,8 +169,8 @@ namespace DongBot
             if (command.ToUpper().Equals("DONG") &&
                 message.Channel.Name.Equals("baseball"))
             {
-                int randomDong = rand.Next(dongArray.Length);
-                string dongGif = dongArray[randomDong];
+                int randomDong = this.rand.Next(this.dongArray.Length);
+                string dongGif = this.dongArray[randomDong];
                 message.Channel.SendMessageAsync(dongGif);
             }
 
@@ -165,8 +178,8 @@ namespace DongBot
             if (command.ToUpper().Equals("DING") &&
                 message.Channel.Name.Equals("baseball"))
             {
-                int randomDing = rand.Next(dingArray.Length);
-                string dingGif = dingArray[randomDing];
+                int randomDing = this.rand.Next(this.dingArray.Length);
+                string dingGif = this.dingArray[randomDing];
                 message.Channel.SendMessageAsync(dingGif);
             }
 
@@ -174,16 +187,16 @@ namespace DongBot
             if (command.ToUpper().Equals("GAMEDAY") &&
                 message.Channel.Name.Equals("college-sports"))
             {
-                int randomGameday = rand.Next(gamedayArray.Length);
-                string gamedayGif = gamedayArray[randomGameday];
+                int randomGameday = this.rand.Next(this.gamedayArray.Length);
+                string gamedayGif = this.gamedayArray[randomGameday];
                 message.Channel.SendMessageAsync(gamedayGif);
             }
 
             //Dumpster Fire
             if (command.ToUpper().Equals("DUMPSTERFIRE"))
             {
-                int randomDumpster = rand.Next(dumpsterArray.Length);
-                string dumpsterGif = dumpsterArray[randomDumpster];
+                int randomDumpster = this.rand.Next(this.dumpsterArray.Length);
+                string dumpsterGif = this.dumpsterArray[randomDumpster];
                 message.Channel.SendMessageAsync(dumpsterGif);
             }
 
@@ -191,8 +204,8 @@ namespace DongBot
             if (Regex.IsMatch(command.ToUpper(), @"GU+Z$") &&
                 message.Channel.Name.Equals("mls"))
             {
-                int randomGuz = rand.Next(guzArray.Length);
-                string guzGif = guzArray[randomGuz];
+                int randomGuz = this.rand.Next(this.guzArray.Length);
+                string guzGif = this.guzArray[randomGuz];
                 message.Channel.SendMessageAsync(guzGif);
             }
 
@@ -200,8 +213,8 @@ namespace DongBot
             if (command.ToUpper().Equals("BOOP") &&
                 message.Channel.Name.Equals("baseball"))
             {
-                int randomBoop = rand.Next(boopArray.Length);
-                string boopGif = boopArray[randomBoop];
+                int randomBoop = this.rand.Next(this.boopArray.Length);
+                string boopGif = this.boopArray[randomBoop];
                 message.Channel.SendMessageAsync(boopGif);
             }
 
@@ -214,8 +227,8 @@ namespace DongBot
             //My Man
             if (command.ToUpper().Equals("MYMAN"))
             {
-                int randomMyman = rand.Next(mymanArray.Length);
-                string mymanGif = mymanArray[randomMyman];
+                int randomMyman = this.rand.Next(this.mymanArray.Length);
+                string mymanGif = this.mymanArray[randomMyman];
                 message.Channel.SendMessageAsync(mymanGif);
             }
 
@@ -223,9 +236,17 @@ namespace DongBot
             if (command.ToUpper().Equals("MVFREE") &&
                 message.Channel.Name.Equals("baseball"))
             {
-                int randomFree = rand.Next(freeArray.Length);
-                string freeGif = freeArray[randomFree];
+                int randomFree = this.rand.Next(this.freeArray.Length);
+                string freeGif = this.freeArray[randomFree];
                 message.Channel.SendMessageAsync(freeGif);
+            }
+
+            //JIGGY
+            if ( command.ToUpper().Equals("JIGGY") &&
+                message.Channel.Name.Equals("baseball") )
+            {
+                string jiggyGif = this.jiggyArray[ 0 ];
+                message.Channel.SendMessageAsync(jiggyGif);
             }
 
 
