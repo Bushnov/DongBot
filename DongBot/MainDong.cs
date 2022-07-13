@@ -250,7 +250,7 @@ namespace DongBot
             //}
 
             //Duball
-            if ( Regex.IsMatch(command.ToUpper(), @"DU+VAL+$") &&
+            if ( Regex.IsMatch(command.ToUpper(), @"DU+V+A+L+$") &&
                 message.Channel.Name.Equals("baseball") )
             {
                 int randomDuvall = this.rand.Next(this.guzArray.Length);
