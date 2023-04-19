@@ -6,6 +6,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using MLBStatsBot;
 
 namespace DongBot
 {
@@ -24,7 +25,8 @@ namespace DongBot
                 "https://media.giphy.com/media/HAd2zDwqOa5MY/giphy.gif",
                 "https://tenor.com/r7Hq.gif",
                 "https://gfycat.com/frankwhoppinggiantschnauzer",
-                "https://media1.tenor.com/images/cde146841a3bb1992d494c6f3897318e/tenor.gif?itemid=7307130"
+                "https://media1.tenor.com/images/cde146841a3bb1992d494c6f3897318e/tenor.gif?itemid=7307130",
+                "https://gfycat.com/composedfarflungbernesemountaindog"
             };
 
         private string[] dingArray =
@@ -90,22 +92,27 @@ namespace DongBot
                 "https://tenor.com/view/my-man-my-main-man-nathaniel-taylor-rollo-larson-sanford-and-son-thats-my-boy-gif-17869407"
             };
 
-        private string[] freeArray =
-            {
-                "https://i.gifer.com/UfTe.gif",
-                "https://thumbs.gfycat.com/RightIllfatedFruitfly-size_restricted.gif",
-                "https://lh3.googleusercontent.com/proxy/hwtoN45oQiRTuslIfQWiaxnurt3n9unOZBpGDEVNQh8Bs1th-lcNcDZF5N4BIWf1AgQQ5SYLG7nD-FhLdgYqCdd1TCA4aP-UH0T_K3jChLtESnbxh_LZbKxgRHwYZ2WrRQ",
-                "https://fansided.com/files/2014/05/PiutOvU.gif",
-                "https://tenor.com/view/atlanta-braves-freddie-freeman-braves-chopon-dance-gif-14645116",
-                "https://tenor.com/view/freddie-freeman-dinger-fredward-baseball-sport-gif-17857667",
-                "https://tenor.com/view/freddie-freeman-braves-baseball-sunflower-drink-gif-12553532",
-                "https://tenor.com/view/chop-on-atlanta-braves-chop-freddie-freeman-walk-off-gif-14162373",
-                "https://tenor.com/view/freddie-freeman-braves-atlanta-gif-13390407"
-            };
+        //private string[] freeArray =
+        //    {
+        //        "https://i.gifer.com/UfTe.gif",
+        //        "https://thumbs.gfycat.com/RightIllfatedFruitfly-size_restricted.gif",
+        //        "https://lh3.googleusercontent.com/proxy/hwtoN45oQiRTuslIfQWiaxnurt3n9unOZBpGDEVNQh8Bs1th-lcNcDZF5N4BIWf1AgQQ5SYLG7nD-FhLdgYqCdd1TCA4aP-UH0T_K3jChLtESnbxh_LZbKxgRHwYZ2WrRQ",
+        //        "https://fansided.com/files/2014/05/PiutOvU.gif",
+        //        "https://tenor.com/view/atlanta-braves-freddie-freeman-braves-chopon-dance-gif-14645116",
+        //        "https://tenor.com/view/freddie-freeman-dinger-fredward-baseball-sport-gif-17857667",
+        //        "https://tenor.com/view/freddie-freeman-braves-baseball-sunflower-drink-gif-12553532",
+        //        "https://tenor.com/view/chop-on-atlanta-braves-chop-freddie-freeman-walk-off-gif-14162373",
+        //        "https://tenor.com/view/freddie-freeman-braves-atlanta-gif-13390407"
+        //    };
 
         private string[] jiggyArray =
             {
                 "https://www.youtube.com/watch?v=3JcmQONgXJM"
+            };
+
+        private string[] duvallArray =
+            {
+                "https://cdn.discordapp.com/attachments/493515081506750485/965421908512350238/ezgif-3-eb8cd00053.gif"
             };
 
         public async Task MainAsync()
@@ -136,10 +143,11 @@ namespace DongBot
             return Task.CompletedTask;
         }
 
-        private Task CommandHandler(SocketMessage message)
+        private async Task<Task> CommandHandler(SocketMessage message)
         {
             string command = "";
             int lengthOfCommand = -1;
+            MLBStats stats = new MLBStats();
 
             //Filtering messages begin here
             if ( !message.Content.StartsWith('!') ) //This is your prefix
@@ -171,7 +179,7 @@ namespace DongBot
             {
                 int randomDong = this.rand.Next(this.dongArray.Length);
                 string dongGif = this.dongArray[randomDong];
-                message.Channel.SendMessageAsync(dongGif);
+                await message.Channel.SendMessageAsync(dongGif);
             }
 
             //DINGS
@@ -180,7 +188,7 @@ namespace DongBot
             {
                 int randomDing = this.rand.Next(this.dingArray.Length);
                 string dingGif = this.dingArray[randomDing];
-                message.Channel.SendMessageAsync(dingGif);
+                await message.Channel.SendMessageAsync(dingGif);
             }
 
             //GAMEDAY
@@ -189,7 +197,7 @@ namespace DongBot
             {
                 int randomGameday = this.rand.Next(this.gamedayArray.Length);
                 string gamedayGif = this.gamedayArray[randomGameday];
-                message.Channel.SendMessageAsync(gamedayGif);
+                await message.Channel.SendMessageAsync(gamedayGif);
             }
 
             //Dumpster Fire
@@ -197,7 +205,7 @@ namespace DongBot
             {
                 int randomDumpster = this.rand.Next(this.dumpsterArray.Length);
                 string dumpsterGif = this.dumpsterArray[randomDumpster];
-                message.Channel.SendMessageAsync(dumpsterGif);
+                await message.Channel.SendMessageAsync(dumpsterGif);
             }
 
             //Guz
@@ -206,7 +214,7 @@ namespace DongBot
             {
                 int randomGuz = this.rand.Next(this.guzArray.Length);
                 string guzGif = this.guzArray[randomGuz];
-                message.Channel.SendMessageAsync(guzGif);
+                await message.Channel.SendMessageAsync(guzGif);
             }
 
             //Boops
@@ -215,13 +223,13 @@ namespace DongBot
             {
                 int randomBoop = this.rand.Next(this.boopArray.Length);
                 string boopGif = this.boopArray[randomBoop];
-                message.Channel.SendMessageAsync(boopGif);
+                await message.Channel.SendMessageAsync(boopGif);
             }
 
             //Noice
             if (command.ToUpper().Equals("NOICE"))
             {
-                message.Channel.SendMessageAsync("https://tenor.com/view/nice-nooice-bling-key-and-peele-gif-4294979");
+                await message.Channel.SendMessageAsync("https://tenor.com/view/nice-nooice-bling-key-and-peele-gif-4294979");
             }
 
             //My Man
@@ -229,16 +237,25 @@ namespace DongBot
             {
                 int randomMyman = this.rand.Next(this.mymanArray.Length);
                 string mymanGif = this.mymanArray[randomMyman];
-                message.Channel.SendMessageAsync(mymanGif);
+                await message.Channel.SendMessageAsync(mymanGif);
             }
 
             //MVFREE
-            if (command.ToUpper().Equals("MVFREE") &&
-                message.Channel.Name.Equals("baseball"))
+            //if (command.ToUpper().Equals("MVFREE") &&
+            //    message.Channel.Name.Equals("baseball"))
+            //{
+            //    int randomFree = this.rand.Next(this.freeArray.Length);
+            //    string freeGif = this.freeArray[randomFree];
+            //    await message.Channel.SendMessageAsync(freeGif);
+            //}
+
+            //Duball
+            if ( Regex.IsMatch(command.ToUpper(), @"DU+V+A+L+$") &&
+                message.Channel.Name.Equals("baseball") )
             {
-                int randomFree = this.rand.Next(this.freeArray.Length);
-                string freeGif = this.freeArray[randomFree];
-                message.Channel.SendMessageAsync(freeGif);
+                int randomDuvall = this.rand.Next(this.guzArray.Length);
+                string duvallGif = this.duvallArray[ 0 ];
+                await message.Channel.SendMessageAsync(duvallGif);
             }
 
             //JIGGY
@@ -246,7 +263,16 @@ namespace DongBot
                 message.Channel.Name.Equals("baseball") )
             {
                 string jiggyGif = this.jiggyArray[ 0 ];
-                message.Channel.SendMessageAsync(jiggyGif);
+                await message.Channel.SendMessageAsync(jiggyGif);
+            }
+
+            //SCHEDULE
+            if ( command.ToUpper().StartsWith("MLB-SCHEDULE") &&
+                message.Channel.Name.Equals("baseball") )
+            {
+                string date = command.Split('-')[ 2 ];
+                string schedule = await stats.GetScheduleAsync(DateTime.Parse(date));
+                await message.Channel.SendMessageAsync(schedule);
             }
 
 
