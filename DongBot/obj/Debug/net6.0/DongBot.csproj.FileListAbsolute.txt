@@ -18,6 +18,10 @@ C:\src\DongBot\DongBot\bin\Debug\net6.0\Newtonsoft.Json.Bson.dll
 C:\src\DongBot\DongBot\bin\Debug\net6.0\System.Interactive.Async.dll
 C:\src\DongBot\DongBot\bin\Debug\net6.0\System.Linq.Async.dll
 C:\src\DongBot\DongBot\bin\Debug\net6.0\System.Reactive.dll
+C:\src\DongBot\DongBot\bin\Debug\net6.0\MLBStats.dll
+C:\src\DongBot\DongBot\bin\Debug\net6.0\MLBAPI.dll
+C:\src\DongBot\DongBot\bin\Debug\net6.0\MLBStats.pdb
+C:\src\DongBot\DongBot\bin\Debug\net6.0\MLBAPI.pdb
 C:\src\DongBot\DongBot\obj\Debug\net6.0\DongBot.csproj.AssemblyReference.cache
 C:\src\DongBot\DongBot\obj\Debug\net6.0\DongBot.GeneratedMSBuildEditorConfig.editorconfig
 C:\src\DongBot\DongBot\obj\Debug\net6.0\DongBot.AssemblyInfoInputs.cache
@@ -29,7 +33,3 @@ C:\src\DongBot\DongBot\obj\Debug\net6.0\refint\DongBot.dll
 C:\src\DongBot\DongBot\obj\Debug\net6.0\DongBot.pdb
 C:\src\DongBot\DongBot\obj\Debug\net6.0\DongBot.genruntimeconfig.cache
 C:\src\DongBot\DongBot\obj\Debug\net6.0\ref\DongBot.dll
-C:\src\DongBot\DongBot\bin\Debug\net6.0\MLBStats.dll
-C:\src\DongBot\DongBot\bin\Debug\net6.0\MLBAPI.dll
-C:\src\DongBot\DongBot\bin\Debug\net6.0\MLBStats.pdb
-C:\src\DongBot\DongBot\bin\Debug\net6.0\MLBAPI.pdb
