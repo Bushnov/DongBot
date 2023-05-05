@@ -36,6 +36,7 @@ namespace DongBot
                 "https://tenor.com/view/right-cats-kitties-yes-ring-gif-12003347",
                 "https://tenor.com/view/ring-bell-dog-cute-seeking-attention-ding-gif-13497885",
                 "https://tenor.com/view/ringthatbell-vs-gbell-ding-ding-the-bell-gif-14783578",
+                "https://giphy.com/gifs/KiaundraJackson-noise-ding-kiaundra-jackson-hdP8JpVJXMTGvazIlx"
             };
 
         public string[] gamedayArray =
@@ -115,7 +116,89 @@ namespace DongBot
 
         public string[] noiceArray =
             {
-                "https://tenor.com/view/nice-nooice-bling-key-and-peele-gif-4294979"
+                "https://tenor.com/view/nice-nooice-bling-key-and-peele-gif-4294979",
+                "https://tenor.com/view/noice-brooklyn-ninenine-b99-smile-gif-11928987"
+            };
+
+        public string[] dongerArray =
+            {
+                "https://giphy.com/gifs/workaholics-season-5-episode-1-l0ErOPdvIk9Zq1YfS",
+                "https://tenor.com/view/donkey-kong-intensify-shaking-gif-14723368",
+                "https://tenor.com/view/its-huge-sup-joseph-donovan-hudson-and-rex-large-big-gif-23978872",
+                "https://tenor.com/view/donger-thats-a-donger-slade-bulge-gif-13294282"
+            };
+
+        public string[] dongestArray =
+            {
+                "https://tenor.com/view/dong-dongs-gif-18220383",
+                "https://tenor.com/view/fake-penis-morph-gif-13172581"
+            };
+
+        public string[] salamiArray =
+            {
+                "https://tenor.com/view/wcth-elizabeth-hearties-what-a-salami-gif-13499385",
+                "https://tenor.com/view/embarrassed-panda-oh-god-holy-salami-hide-face-gif-17443872",
+                "https://giphy.com/gifs/splat-nicksplat-rockos-modern-life-l4EpkZThLWJrqkfVm",
+                "https://giphy.com/gifs/Marcher-at-salami-wurst-loidl-QxApjrdi9RjgpbQVeB"
+            };
+
+        public string[] sweepArray =
+            {
+                "https://tenor.com/view/mrs-doubtfire-cleaning-dancing-happy-gif-15445847",
+                "https://tenor.com/view/sweeping-cleaning-mopping-mr-clean-gif-17663331",
+                "https://tenor.com/view/broom-sweep-patrick-fail-stupid-gif-5417128",
+                "https://tenor.com/view/sweep-padres-gif-22851806"
+            };
+
+        public string[] washArray =
+            {
+                "https://tenor.com/view/ron-washington-gif-23550421",
+                "https://tenor.com/view/ron-washington-gif-25561091",
+                "https://tenor.com/view/ron-washington-atlanta-braves-shake-gif-27636305",
+                "https://tenor.com/view/ron-washington-william-contreras-salute-gif-25697516",
+                "https://giphy.com/gifs/mlb-sports-braves-ron-washington-hHMd9LPgG5fDhBIFhy",
+                "https://giphy.com/gifs/mlb-sports-ron-washington-send-em-kIJsORuundDCPkzv9o",
+                "https://giphy.com/gifs/mlb-sports-baseball-joc-pederson-x0qVkQfe69H4g06lyT",
+                "https://giphy.com/gifs/mlb-laughing-washington-ron-h2UDgOSXdLqRN7E7h9"
+            };
+
+        public string[] thicccArray =
+            {
+                "https://tenor.com/view/extra-thicc-extra-thick-thicc-thick-aku-gif-21813785",
+                "https://tenor.com/view/thiccest-donut-media-james-pumphrey-round-gif-17411561",
+                "https://tenor.com/view/thicc-king-andre-braugher-raymond-holt-brooklyn-nine-nine-thick-gif-16913349",
+                "https://tenor.com/view/brandon-herrera-ak50-thicc-damn-rear-trunnion-gif-19257419",
+                "https://tenor.com/view/thick-thicker-bowl-oatmeal-point-gif-5457950",
+                "https://tenor.com/view/gettin-thicker-and-thicker-thick-yas-queen-slay-shake-it-gif-14049394",
+                "https://giphy.com/gifs/hyperrpg-twitch-rat-queens-ratqueens-kcOVt7d7hcUVkADVS1",
+                "https://giphy.com/gifs/vh1-26BRvneVlfR2MMyuQ",
+                "https://giphy.com/gifs/daveonfxx-thicc-thiccness-advanced-3tK0Yo2rs1nkSqUq9m"
+            };
+
+        public string[] tootArray =
+            {
+                "https://tenor.com/view/toot-tin-man-wizard-of-oz-gif-15462159",
+                "https://tenor.com/view/toot-toot-bitch-know-it-all-show-off-arrogant-hater-gif-15549253",
+                "https://tenor.com/view/jake-peralta-brooklyn-nine-nine-nbc-toot-b99-gif-16001901",
+                "https://tenor.com/view/jake-peralta-brooklyn-nine-nine-nbc-toot-b99-gif-16001901",
+                "https://giphy.com/gifs/drunkhistory-comedy-central-drunk-history-IeG3YafCD9Drk2y3ZB"
+            };
+
+        public string[] dingdingdingArray =
+            {
+                "https://tenor.com/view/tyler-hynes-hynies-ding-ding-ding-we-have-a-winner-its-christmas-eve-gif-19820176",
+                "https://tenor.com/view/jim-carrey-liar-ding-ding-ding-what-do-we-have-for-her-gif-15762298",
+                "https://tenor.com/view/better-call-saul-don-eladio-gif-26390716",
+                "https://giphy.com/gifs/survivorau-survivor-kgrCxsTQFj0HAh2TUG",
+                "https://giphy.com/gifs/clawstnt-bryce-uncle-daddy-quiet-ann-rqMxQEZlney9bsVGtH"
+            };
+
+        public string[] molsonArray =
+            {
+                "https://tenor.com/view/beer-alcohol-thirsty-molson-canadian-canadian-beer-gif-19540823",
+                "https://tenor.com/view/beer-labatts-beer-canadian-beer-schooner-beer-boddingtons-beer-gif-20482782",
+                "https://giphy.com/gifs/workaholics-comedy-central-season-2-episode-9-l0ErOxnmLuj9pMIvu",
+                "https://giphy.com/gifs/MacGruber-macgruber-show-series-v0SoH4cES4qJ77PaTi"
             };
 
         public DBConst()
@@ -131,7 +214,17 @@ namespace DongBot
                     { "NOICE", new DongDictEntry("" , noiceArray) },
                     { "MYMAN", new DongDictEntry("" , mymanArray) },
                     { @"DU+V+A+L+$", new DongDictEntry("baseball" , duvallArray) },
-                    { "JIGGY", new DongDictEntry("baseball" , jiggyArray) }
+                    { "JIGGY", new DongDictEntry("baseball" , jiggyArray) },
+                    { "DONGER", new DongDictEntry("baseball" , dongerArray) },
+                    { "DONGEST", new DongDictEntry("baseball" , dongestArray) },
+                    { "SALAMI", new DongDictEntry("baseball" , salamiArray) },
+                    { "SWEEP", new DongDictEntry("baseball" , sweepArray) },
+                    { "WASH", new DongDictEntry("baseball" , washArray) },
+                    { "WINDMILL", new DongDictEntry("baseball" , washArray) },
+                    { @"THICC+$", new DongDictEntry("baseball" , thicccArray) },
+                    { "TOOT", new DongDictEntry("baseball" , tootArray) },
+                    { "DINGDINGDING", new DongDictEntry("baseball" , dingdingdingArray) },
+                    { "MOLSON", new DongDictEntry("baseball" , molsonArray) }
                 };
         }
 
