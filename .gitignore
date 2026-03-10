@@ -5,3 +5,32 @@
 APITestConsole/obj/Debug/net6.0/LocalTestConsole.csproj.AssemblyReference.cache
 DongBot/obj/Debug/net6.0/DongBot.csproj.AssemblyReference.cache
 *.cache
+
+# Bot secrets - DO NOT COMMIT
+token.txt
+**/token.txt
+
+# Backup files
+gifcommands.backup.*.json
+
+# Build outputs
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# User-specific files
+*.rsuser
+*.userprefs
+
+# Rider
+.idea/
+*.sln.iml

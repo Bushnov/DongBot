@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DongBot")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c59b8c29dfeb7156c5ec3e04f70cea92c59ae0f2")]
 [assembly: System.Reflection.AssemblyProductAttribute("DongBot")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DongBot")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

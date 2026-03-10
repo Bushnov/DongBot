@@ -5,15 +5,12 @@ VisualStudioVersion = 17.1.32228.430
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DongBot", "DongBot\DongBot.csproj", "{D7C710D5-4240-402E-8A3F-5872785E868D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LocalTestConsole", "APITestConsole\LocalTestConsole.csproj", "{6D3645EC-E416-4089-9777-E775064A0E59}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6ABB357C-AF50-4F46-BBA7-1A4922C1C01D}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MLBStats", "MLBStats\MLBStats.csproj", "{4F78FBD5-4FDB-4454-A6A6-CD5A0DEA97CD}"
-EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,14 +21,6 @@ Global
 		{D7C710D5-4240-402E-8A3F-5872785E868D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D7C710D5-4240-402E-8A3F-5872785E868D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D7C710D5-4240-402E-8A3F-5872785E868D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6D3645EC-E416-4089-9777-E775064A0E59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6D3645EC-E416-4089-9777-E775064A0E59}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6D3645EC-E416-4089-9777-E775064A0E59}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6D3645EC-E416-4089-9777-E775064A0E59}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4F78FBD5-4FDB-4454-A6A6-CD5A0DEA97CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4F78FBD5-4FDB-4454-A6A6-CD5A0DEA97CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4F78FBD5-4FDB-4454-A6A6-CD5A0DEA97CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4F78FBD5-4FDB-4454-A6A6-CD5A0DEA97CD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

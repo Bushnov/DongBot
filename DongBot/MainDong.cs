@@ -6,12 +6,14 @@ using System.Reflection.Metadata.Ecma335;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using MLBStatsBot;
 
 namespace DongBot
 {
     class MainDong
     {
+        // Admin channel name - only administrative commands can be run here
+        private const string ADMIN_CHANNEL_NAME = "dongbot-admin";
+
         public static void Main(string[] args)
         => new MainDong().MainAsync().GetAwaiter().GetResult();
 
@@ -19,7 +21,6 @@ namespace DongBot
         private DiscordSocketConfig _config;
         private Random rand = new Random();
         private DBActions DBActions = new DBActions();
-        private DBConst DBConst = new DBConst();
 
         public async Task MainAsync()
         {
@@ -53,10 +54,16 @@ namespace DongBot
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Check if a command is being run in the admin channel
+        /// </summary>
+        private bool IsAdminChannel(string channelName)
+        {
+            return channelName.Equals(ADMIN_CHANNEL_NAME, StringComparison.OrdinalIgnoreCase);
+        }
+
         private async Task<Task> CommandHandler(SocketMessage message)
         {
-            MLBStats stats = new MLBStats();
-
             // Filter out if the message is a command or not
             string command = DBActions.FilterMessage(message, '!');
             if (command == "")
@@ -64,120 +71,184 @@ namespace DongBot
                 return Task.CompletedTask;
             }
 
-            // Process Gif Commands
-            string gifCommand = DBActions.DongGifs(command, message.Channel.Name);
+            // Get user info once for all commands
+            string userId = message.Author.Id.ToString();
+            string username = message.Author.Username;
+
+            // Process Gif Commands (pass channel ID for channel restrictions)
+            string gifCommand = DBActions.DongGifs(command, message.Channel.Name, message.Channel.Id, userId, username);
             if (!gifCommand.Equals(""))
             {
                 await message.Channel.SendMessageAsync(gifCommand);
+                return Task.CompletedTask;
             }
 
-            /**
-            //Commands begin here
-            //DONGS
-            if (command.ToUpper().Equals("DONG") &&
-                message.Channel.Name.Equals("baseball"))
+            // GIF Management Commands (Admin Only)
+            if (command.ToUpper().StartsWith("GIF-ADD"))
             {
-                int randomDong = this.rand.Next(DBConst.dongArray.Length);
-                string dongGif = DBConst.dongArray[randomDong];
-                await message.Channel.SendMessageAsync(dongGif);
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GifAdd(command, userId, username, message.Channel.Name);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
-            //DINGS
-            if (command.ToUpper().Equals("DING") &&
-                message.Channel.Name.Equals("baseball"))
+            if (command.ToUpper().StartsWith("GIF-REMOVE"))
             {
-                int randomDing = this.rand.Next(DBConst.dingArray.Length);
-                string dingGif = DBConst.dingArray[randomDing];
-                await message.Channel.SendMessageAsync(dingGif);
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GifRemove(command, userId, username, message.Channel.Name);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
-            //GAMEDAY
-            if (command.ToUpper().Equals("GAMEDAY") &&
-                message.Channel.Name.Equals("college-sports"))
+            if (command.ToUpper().Equals("GIF-REFRESH"))
             {
-                int randomGameday = this.rand.Next(DBConst.gamedayArray.Length);
-                string gamedayGif = DBConst.gamedayArray[randomGameday];
-                await message.Channel.SendMessageAsync(gamedayGif);
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GifRefresh(command, userId, username, message.Channel.Name);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
-            //Dumpster Fire
-            if (command.ToUpper().Equals("DUMPSTERFIRE"))
+            if (command.ToUpper().StartsWith("GIF-LIST"))
             {
-                int randomDumpster = this.rand.Next(DBConst.dumpsterArray.Length);
-                string dumpsterGif = DBConst.dumpsterArray[randomDumpster];
-                await message.Channel.SendMessageAsync(dumpsterGif);
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GifList(command, userId, username, message.Channel.Name);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
-            //Guz
-            if (Regex.IsMatch(command.ToUpper(), @"GU+Z$") &&
-                message.Channel.Name.Equals("mls"))
+            if (command.ToUpper().StartsWith("GIF-ALIAS"))
             {
-                int randomGuz = this.rand.Next(DBConst.guzArray.Length);
-                string guzGif = DBConst.guzArray[randomGuz];
-                await message.Channel.SendMessageAsync(guzGif);
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GifAlias(command, userId, username, message.Channel.Name);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
-            //Boops
-            if (command.ToUpper().Equals("BOOP") &&
-                message.Channel.Name.Equals("baseball"))
+            if (command.ToUpper().StartsWith("GIF-CHANNEL"))
             {
-                int randomBoop = this.rand.Next(DBConst.boopArray.Length);
-                string boopGif = DBConst.boopArray[randomBoop];
-                await message.Channel.SendMessageAsync(boopGif);
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GifChannel(command, userId, username, message.Channel.Name);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
-            //Noice
-            if (command.ToUpper().Equals("NOICE"))
+            if (command.ToUpper().StartsWith("GIF-VALIDATE"))
             {
-                await message.Channel.SendMessageAsync("https://tenor.com/view/nice-nooice-bling-key-and-peele-gif-4294979");
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = await DBActions.GifValidate(command, userId, username, message.Channel.Name);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
-            //My Man
-            if (command.ToUpper().Equals("MYMAN"))
+            // Audit Log Commands (Admin Only)
+            if (command.ToUpper().StartsWith("AUDIT") && !command.ToUpper().StartsWith("AUDIT-STATS"))
             {
-                int randomMyman = this.rand.Next(DBConst.mymanArray.Length);
-                string mymanGif = DBConst.mymanArray[randomMyman];
-                await message.Channel.SendMessageAsync(mymanGif);
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GetAuditLog(command, userId, username);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
-            //MVFREE
-            //if (command.ToUpper().Equals("MVFREE") &&
-            //    message.Channel.Name.Equals("baseball"))
-            //{
-            //    int randomFree = this.rand.Next(this.freeArray.Length);
-            //    string freeGif = this.freeArray[randomFree];
-            //    await message.Channel.SendMessageAsync(freeGif);
-            //}
-
-            //Duball
-            if ( Regex.IsMatch(command.ToUpper(), @"DU+V+A+L+$") &&
-                message.Channel.Name.Equals("baseball") )
+            if (command.ToUpper().Equals("AUDIT-STATS"))
             {
-                int randomDuvall = this.rand.Next(DBConst.guzArray.Length);
-                string duvallGif = DBConst.duvallArray[ 0 ];
-                await message.Channel.SendMessageAsync(duvallGif);
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GetAuditStats(userId, username);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
-            //JIGGY
-            if ( command.ToUpper().Equals("JIGGY") &&
-                message.Channel.Name.Equals("baseball") )
+            // Statistics Commands (Admin Only)
+            if (command.ToUpper().Equals("STATS"))
             {
-                string jiggyGif = DBConst.jiggyArray[ 0 ];
-                await message.Channel.SendMessageAsync(jiggyGif);
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GetStats(userId, username);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
-            */
-
-
-            //SCHEDULE
-            if ( command.ToUpper().StartsWith("MLB-SCHEDULE") &&
-                message.Channel.Name.Equals("baseball"))
+            if (command.ToUpper().StartsWith("STATS-TOP"))
             {
-                string date = command.Split('-')[ 2 ];
-                string schedule = await stats.GetScheduleAsync(DateTime.Parse(date));
-                await message.Channel.SendMessageAsync(schedule);
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GetTopCommands(command, userId, username);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
             }
 
+            if (command.ToUpper().StartsWith("STATS-USER"))
+            {
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GetUserStatistics(command, userId, username);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
+            }
+
+            if (command.ToUpper().StartsWith("STATS-COMMAND"))
+            {
+                if (!IsAdminChannel(message.Channel.Name))
+                {
+                    await message.Channel.SendMessageAsync($"Error: This command can only be used in #{ADMIN_CHANNEL_NAME}");
+                    return Task.CompletedTask;
+                }
+                string result = DBActions.GetCommandStatistics(command, userId, username);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
+            }
+
+            // Help Command (Available in all channels, shows channel-specific info)
+            if (command.ToUpper().Equals("HELP") || command.ToUpper().Equals("GIF-HELP"))
+            {
+                string result = DBActions.GetHelp(message.Channel.Name, message.Channel.Id, IsAdminChannel(message.Channel.Name), userId, username);
+                await message.Channel.SendMessageAsync(result);
+                return Task.CompletedTask;
+            }
 
             return Task.CompletedTask;
         }
