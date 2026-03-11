@@ -69,9 +69,15 @@ jobs:
           BEFORE_VERSION=$(git show "${BEFORE_FILE_REF}" | sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' | head -n 1)
           AFTER_VERSION=$(git show "${HEAD_SHA}:${PROJECT_FILE}" | sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' | head -n 1)
 
-          if [[ -z "${BEFORE_VERSION}" || -z "${AFTER_VERSION}" ]]; then
-            echo "Could not parse <Version> from ${PROJECT_FILE}."
+          if [[ -z "${AFTER_VERSION}" ]]; then
+            echo "Could not parse <Version> from ${PROJECT_FILE} at HEAD."
             exit 1
+          fi
+
+          if [[ -z "${BEFORE_VERSION}" ]]; then
+            echo "No <Version> found in base ref; treating this as initial version introduction."
+            echo "Version after: ${AFTER_VERSION}"
+            exit 0
           fi
 
           echo "Version before: ${BEFORE_VERSION}"
