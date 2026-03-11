@@ -4,34 +4,57 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DongBot
 {
     /// <summary>
-    /// Generalized statistics tracking system for all bot commands and operations.
-    /// Tracks usage counts, timing, users, channels, and trends.
+    /// Statistics tracking system for all bot commands and operations.
+    /// Writes are batched in-memory and flushed to disk every 30 seconds.
+    /// Call Dispose() on shutdown to flush any pending data.
     /// </summary>
-    public class StatisticsTracker
+    public class StatisticsTracker : IDisposable
     {
         private readonly string _statsFilePath;
         private readonly object _lock = new object();
-        private CommandStatistics _statistics;
+        private CommandStatistics _statistics = new CommandStatistics();
         private readonly BackupManager _backupManager;
+        private bool _isDirty = false;
+        private readonly CancellationTokenSource _flushCancellation = new CancellationTokenSource();
+        private readonly Task _flushTask;
 
         public StatisticsTracker(string statsFilePath = "bot_statistics.json")
         {
             _statsFilePath = statsFilePath;
-            
-            // Initialize backup manager with backups subdirectory
+
             string backupDir = Path.Combine(Path.GetDirectoryName(_statsFilePath) ?? ".", "backups");
-            _backupManager = new BackupManager(backupDir, maxBackupsToKeep: 10, enableTimedBackups: false);
-            
+            _backupManager = new BackupManager(backupDir, maxBackupsToKeep: 10);
+
             LoadStatistics();
+
+            // Flush dirty writes to disk every 30 seconds rather than on every TrackCommand() call
+            _flushTask = RunFlushLoopAsync(_flushCancellation.Token);
         }
 
-        /// <summary>
-        /// Load statistics from file
-        /// </summary>
+        private async Task RunFlushLoopAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                using PeriodicTimer timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+                while (await timer.WaitForNextTickAsync(cancellationToken))
+                {
+                    FlushIfDirty();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during shutdown.
+            }
+        }
+
+        // Internal persistence
+
         private void LoadStatistics()
         {
             lock (_lock)
@@ -51,16 +74,15 @@ namespace DongBot
                         return;
                     }
 
-                    // Create backup before loading
                     _backupManager.BackupOnLoad(_statsFilePath);
 
                     string json = File.ReadAllText(_statsFilePath);
                     _statistics = JsonSerializer.Deserialize<CommandStatistics>(json, new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
-                    });
+                    }) ?? new CommandStatistics();
 
-                    if (_statistics == null)
+                    if (_statistics.Commands == null || _statistics.Users == null || _statistics.Channels == null || _statistics.DailyStats == null)
                     {
                         _statistics = new CommandStatistics
                         {
@@ -87,25 +109,19 @@ namespace DongBot
             }
         }
 
-        /// <summary>
-        /// Save statistics to file
-        /// </summary>
         private void SaveStatistics()
         {
             lock (_lock)
             {
                 try
                 {
-                    // Create backup before saving
                     _backupManager.BackupBeforeSave(_statsFilePath);
 
-                    JsonSerializerOptions options = new JsonSerializerOptions
+                    string json = JsonSerializer.Serialize(_statistics, new JsonSerializerOptions
                     {
                         WriteIndented = true,
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    };
-
-                    string json = JsonSerializer.Serialize(_statistics, options);
+                    });
                     File.WriteAllText(_statsFilePath, json);
                 }
                 catch (Exception ex)
@@ -115,16 +131,41 @@ namespace DongBot
             }
         }
 
+        private void FlushIfDirty()
+        {
+            lock (_lock)
+            {
+                if (!_isDirty) return;
+                SaveStatistics();
+                _isDirty = false;
+            }
+        }
+
         /// <summary>
-        /// Track a command execution
+        /// Force-flush any pending writes and stop the flush timer.
+        /// Call this on bot shutdown to avoid losing the last flush window of data.
         /// </summary>
-        /// <param name="commandName">Name of the command</param>
-        /// <param name="category">Category (GIF, AUDIT, ADMIN, etc.)</param>
-        /// <param name="userId">Discord user ID</param>
-        /// <param name="username">Discord username</param>
-        /// <param name="channelName">Channel name where executed</param>
-        /// <param name="success">Whether the command succeeded</param>
-        public void TrackCommand(string commandName, string category, string userId, 
+        public void Dispose()
+        {
+            _flushCancellation.Cancel();
+            try
+            {
+                _flushTask.GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during shutdown.
+            }
+            _flushCancellation.Dispose();
+            FlushIfDirty();
+        }
+
+        // Public API
+
+        /// <summary>
+        /// Track a command execution. The update is held in memory and written to disk within 30 seconds.
+        /// </summary>
+        public void TrackCommand(string commandName, string category, string userId,
                                 string username, string channelName, bool success = true)
         {
             lock (_lock)
@@ -134,7 +175,7 @@ namespace DongBot
                     DateTime now = DateTime.Now;
                     string dateKey = now.ToString("yyyy-MM-dd");
 
-                    // Track command-level statistics
+                    // Command-level statistics
                     if (!_statistics.Commands.ContainsKey(commandName))
                     {
                         _statistics.Commands[commandName] = new CommandStats
@@ -155,44 +196,28 @@ namespace DongBot
                     CommandStats cmdStats = _statistics.Commands[commandName];
                     cmdStats.TotalExecutions++;
                     if (success)
-                    {
                         cmdStats.SuccessfulExecutions++;
-                    }
                     else
-                    {
                         cmdStats.FailedExecutions++;
-                    }
-
                     cmdStats.LastUsed = now;
 
-                    // Track by user
-#pragma warning disable IDE0011 // Add braces
                     if (!cmdStats.UserExecutions.ContainsKey(userId))
                         cmdStats.UserExecutions[userId] = 0;
-#pragma warning restore IDE0011 // Add braces
                     cmdStats.UserExecutions[userId]++;
 
-                    // Track by channel
                     if (!string.IsNullOrEmpty(channelName))
                     {
                         if (!cmdStats.ChannelExecutions.ContainsKey(channelName))
-                        {
                             cmdStats.ChannelExecutions[channelName] = 0;
-                        }
-
                         cmdStats.ChannelExecutions[channelName]++;
                     }
 
-                    // Track by hour of day
                     int hour = now.Hour;
                     if (!cmdStats.HourlyDistribution.ContainsKey(hour))
-                    {
                         cmdStats.HourlyDistribution[hour] = 0;
-                    }
-
                     cmdStats.HourlyDistribution[hour]++;
 
-                    // Track user-level statistics
+                    // User-level statistics
                     if (!_statistics.Users.ContainsKey(userId))
                     {
                         _statistics.Users[userId] = new UserStats
@@ -207,18 +232,15 @@ namespace DongBot
                     }
 
                     UserStats userStats = _statistics.Users[userId];
-                    userStats.Username = username; // Update in case username changed
+                    userStats.Username = username;
                     userStats.TotalCommands++;
                     userStats.LastSeen = now;
 
                     if (!userStats.CommandCounts.ContainsKey(commandName))
-                    {
                         userStats.CommandCounts[commandName] = 0;
-                    }
-
                     userStats.CommandCounts[commandName]++;
 
-                    // Track channel-level statistics
+                    // Channel-level statistics
                     if (!string.IsNullOrEmpty(channelName))
                     {
                         if (!_statistics.Channels.ContainsKey(channelName))
@@ -236,16 +258,12 @@ namespace DongBot
                         channelStats.TotalCommands++;
 
                         if (!channelStats.CommandCounts.ContainsKey(commandName))
-                        {
                             channelStats.CommandCounts[commandName] = 0;
-                        }
-
                         channelStats.CommandCounts[commandName]++;
-
                         channelStats.ActiveUsers.Add(userId);
                     }
 
-                    // Track daily statistics
+                    // Daily statistics
                     if (!_statistics.DailyStats.ContainsKey(dateKey))
                     {
                         _statistics.DailyStats[dateKey] = new DailyStats
@@ -262,13 +280,11 @@ namespace DongBot
                     dailyStats.UniqueUsers.Add(userId);
 
                     if (!dailyStats.CommandCounts.ContainsKey(commandName))
-                    {
                         dailyStats.CommandCounts[commandName] = 0;
-                    }
-
                     dailyStats.CommandCounts[commandName]++;
 
-                    SaveStatistics();
+                    // Mark dirty - flush timer persists to disk within 30 seconds
+                    _isDirty = true;
                 }
                 catch (Exception ex)
                 {
@@ -277,10 +293,8 @@ namespace DongBot
             }
         }
 
-        /// <summary>
-        /// Get top commands by usage
-        /// </summary>
-        public List<CommandStats> GetTopCommands(int count = 10, string category = null)
+        /// <summary>Get top commands by usage.</summary>
+        public List<CommandStats> GetTopCommands(int count = 10, string? category = null)
         {
             lock (_lock)
             {
@@ -288,30 +302,24 @@ namespace DongBot
                     .OrderByDescending(c => c.TotalExecutions);
 
                 if (!string.IsNullOrEmpty(category))
-                {
                     commands = commands.Where(c => c.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
-                }
 
                 return commands.Take(count).ToList();
             }
         }
 
-        /// <summary>
-        /// Get statistics for a specific command
-        /// </summary>
-        public CommandStats GetCommandStats(string commandName)
+        /// <summary>Get statistics for a specific command.</summary>
+        public CommandStats? GetCommandStats(string commandName)
         {
             lock (_lock)
             {
-                return _statistics.Commands.ContainsKey(commandName) 
-                    ? _statistics.Commands[commandName] 
+                return _statistics.Commands.ContainsKey(commandName)
+                    ? _statistics.Commands[commandName]
                     : null;
             }
         }
 
-        /// <summary>
-        /// Get top users by command usage
-        /// </summary>
+        /// <summary>Get top users by command usage.</summary>
         public List<UserStats> GetTopUsers(int count = 10)
         {
             lock (_lock)
@@ -323,22 +331,18 @@ namespace DongBot
             }
         }
 
-        /// <summary>
-        /// Get statistics for a specific user
-        /// </summary>
-        public UserStats GetUserStats(string userId)
+        /// <summary>Get statistics for a specific user.</summary>
+        public UserStats? GetUserStats(string userId)
         {
             lock (_lock)
             {
-                return _statistics.Users.ContainsKey(userId) 
-                    ? _statistics.Users[userId] 
+                return _statistics.Users.ContainsKey(userId)
+                    ? _statistics.Users[userId]
                     : null;
             }
         }
 
-        /// <summary>
-        /// Get channel statistics
-        /// </summary>
+        /// <summary>Get channel statistics.</summary>
         public List<ChannelStats> GetChannelStats(int count = 10)
         {
             lock (_lock)
@@ -350,9 +354,7 @@ namespace DongBot
             }
         }
 
-        /// <summary>
-        /// Get daily statistics for date range
-        /// </summary>
+        /// <summary>Get daily statistics for a date range.</summary>
         public List<DailyStats> GetDailyStats(int days = 7)
         {
             lock (_lock)
@@ -365,36 +367,31 @@ namespace DongBot
             }
         }
 
-        /// <summary>
-        /// Get overall statistics summary
-        /// </summary>
+        /// <summary>Get overall statistics summary.</summary>
         public StatisticsSummary GetSummary()
         {
             lock (_lock)
             {
                 int totalCommands = _statistics.Commands.Values.Sum(c => c.TotalExecutions);
-                int totalUsers = _statistics.Users.Count;
-                int totalChannels = _statistics.Channels.Count;
 
-                CommandStats mostUsedCommand = _statistics.Commands.Values
+                CommandStats? mostUsedCommand = _statistics.Commands.Values
                     .OrderByDescending(c => c.TotalExecutions)
                     .FirstOrDefault();
 
-                UserStats mostActiveUser = _statistics.Users.Values
+                UserStats? mostActiveUser = _statistics.Users.Values
                     .OrderByDescending(u => u.TotalCommands)
                     .FirstOrDefault();
 
-                // Get today's stats
                 string today = DateTime.Now.ToString("yyyy-MM-dd");
-                int todayCommands = _statistics.DailyStats.ContainsKey(today) 
-                    ? _statistics.DailyStats[today].TotalCommands 
+                int todayCommands = _statistics.DailyStats.ContainsKey(today)
+                    ? _statistics.DailyStats[today].TotalCommands
                     : 0;
 
                 return new StatisticsSummary
                 {
                     TotalCommands = totalCommands,
-                    TotalUniqueUsers = totalUsers,
-                    TotalChannels = totalChannels,
+                    TotalUniqueUsers = _statistics.Users.Count,
+                    TotalChannels = _statistics.Channels.Count,
                     TotalCommandTypes = _statistics.Commands.Count,
                     MostUsedCommand = mostUsedCommand?.CommandName,
                     MostUsedCommandCount = mostUsedCommand?.TotalExecutions ?? 0,
@@ -406,53 +403,52 @@ namespace DongBot
         }
     }
 
-    // Data classes
     public class CommandStatistics
     {
-        public Dictionary<string, CommandStats> Commands { get; set; }
-        public Dictionary<string, UserStats> Users { get; set; }
-        public Dictionary<string, ChannelStats> Channels { get; set; }
-        public Dictionary<string, DailyStats> DailyStats { get; set; }
+        public Dictionary<string, CommandStats> Commands { get; set; } = new Dictionary<string, CommandStats>();
+        public Dictionary<string, UserStats> Users { get; set; } = new Dictionary<string, UserStats>();
+        public Dictionary<string, ChannelStats> Channels { get; set; } = new Dictionary<string, ChannelStats>();
+        public Dictionary<string, DailyStats> DailyStats { get; set; } = new Dictionary<string, DailyStats>();
     }
 
     public class CommandStats
     {
-        public string CommandName { get; set; }
-        public string Category { get; set; }
+        public string CommandName { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
         public int TotalExecutions { get; set; }
         public int SuccessfulExecutions { get; set; }
         public int FailedExecutions { get; set; }
         public DateTime FirstUsed { get; set; }
         public DateTime LastUsed { get; set; }
-        public Dictionary<string, int> UserExecutions { get; set; }
-        public Dictionary<string, int> ChannelExecutions { get; set; }
-        public Dictionary<int, int> HourlyDistribution { get; set; }
+        public Dictionary<string, int> UserExecutions { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> ChannelExecutions { get; set; } = new Dictionary<string, int>();
+        public Dictionary<int, int> HourlyDistribution { get; set; } = new Dictionary<int, int>();
     }
 
     public class UserStats
     {
-        public string UserId { get; set; }
-        public string Username { get; set; }
+        public string UserId { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
         public int TotalCommands { get; set; }
-        public Dictionary<string, int> CommandCounts { get; set; }
+        public Dictionary<string, int> CommandCounts { get; set; } = new Dictionary<string, int>();
         public DateTime FirstSeen { get; set; }
         public DateTime LastSeen { get; set; }
     }
 
     public class ChannelStats
     {
-        public string ChannelName { get; set; }
+        public string ChannelName { get; set; } = string.Empty;
         public int TotalCommands { get; set; }
-        public Dictionary<string, int> CommandCounts { get; set; }
-        public HashSet<string> ActiveUsers { get; set; }
+        public Dictionary<string, int> CommandCounts { get; set; } = new Dictionary<string, int>();
+        public HashSet<string> ActiveUsers { get; set; } = new HashSet<string>();
     }
 
     public class DailyStats
     {
-        public string Date { get; set; }
+        public string Date { get; set; } = string.Empty;
         public int TotalCommands { get; set; }
-        public HashSet<string> UniqueUsers { get; set; }
-        public Dictionary<string, int> CommandCounts { get; set; }
+        public HashSet<string> UniqueUsers { get; set; } = new HashSet<string>();
+        public Dictionary<string, int> CommandCounts { get; set; } = new Dictionary<string, int>();
     }
 
     public class StatisticsSummary
@@ -461,9 +457,9 @@ namespace DongBot
         public int TotalUniqueUsers { get; set; }
         public int TotalChannels { get; set; }
         public int TotalCommandTypes { get; set; }
-        public string MostUsedCommand { get; set; }
+        public string? MostUsedCommand { get; set; }
         public int MostUsedCommandCount { get; set; }
-        public string MostActiveUser { get; set; }
+        public string? MostActiveUser { get; set; }
         public int MostActiveUserCount { get; set; }
         public int TodayCommandCount { get; set; }
     }

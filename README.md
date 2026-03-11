@@ -1,327 +1,142 @@
 # DongBot
 
-A Discord bot for managing and serving GIF commands, with comprehensive administrative tools and analytics. Written in C# with Discord.NET.
+Discord bot for GIF command delivery, MLB/Braves commands, admin auditing, and usage analytics.
 
-## Features
+## Highlights
 
-### 🎯 Dynamic GIF System
-- **JSON-based command storage**: All commands stored in `gifcommands.json` for easy management
-- **Channel-aware**: Commands respect Discord channel permissions
-- **Multi-channel restrictions**: Restrict commands to specific channels by ID
-- **Regex support**: Advanced pattern matching for flexible command triggers
-- **Command aliases**: Multiple triggers for the same command
-- **Automatic backups**: All data files backed up on load and before save
+- JSON-backed GIF command system with aliases, regex support, and channel restrictions
+- MLB command suite (scores, schedule, standings, team/player/venue lookups)
+- Braves scheduler for daily/weekly automated posts
+- Admin-only audit and statistics reporting
+- Backups, URL validation, and command usage tracking
 
-### 📊 Analytics & Monitoring
-- **Statistics tracking**: Track command usage, user activity, and trends
-- **Audit logging**: Complete audit trail of all administrative actions
-- **URL validation**: Verify GIF URLs are valid and accessible
-- **Channel-based help**: Context-aware help system
+## Prerequisites
 
-### 🔐 Permission Management
-- **Admin channel**: All administrative commands restricted to `#dongbot-admin`
-- **Channel-based access**: Users can only use commands in channels they have access to
-- **Safe permissions**: No role requirements - access controlled by Discord channel permissions
+- .NET 8 SDK
+- Discord bot token
 
-## Quick Start
+## Run Locally
 
-### Using GIF Commands
-Simply type `!<command>` in any Discord channel where the command is available:
-```
-!dong     - Random home run celebration GIF
-!ding     - Random "ding" GIF  
-!sweep    - Random sweeping GIF
-!boop     - Random boop GIF
-```
+1. Create `DongBot/token.txt` with your bot token (or set `TokenFilePath` in `botconfig.json`).
+2. Build:
 
-### Getting Help
-```
-!help     - Show all commands available in the current channel
-```
-When used in `#dongbot-admin`, shows all administrative commands as well.
-
-## Administrative Commands
-
-**⚠️ All administrative commands can only be used in `#dongbot-admin` channel**
-
-### GIF Management
-```
-!gif-add COMMANDNAME URL [channel] [pattern] [isRegex] [aliases]
-    Add a new GIF to a command or create a new command
-    Example: !gif-add DONG https://giphy.com/example.gif
-
-!gif-remove COMMANDNAME [URL]
-    Remove a specific GIF or entire command
-    Example: !gif-remove DONG https://giphy.com/example.gif
-
-!gif-refresh
-    Reload all commands from gifcommands.json
-
-!gif-list [COMMANDNAME]
-    List all commands or details for a specific command
-    Example: !gif-list DONG
-
-!gif-alias COMMANDNAME add|remove ALIAS
-    Manage command aliases
-    Example: !gif-alias DONG add DINGER
-
-!gif-channel COMMANDNAME add|remove|list|clear [CHANNELID]
-    Manage channel restrictions for commands
-    Example: !gif-channel DONG add 123456789012345678
-
-!gif-validate [COMMANDNAME] [--check-access]
-    Validate GIF URLs (optionally check accessibility)
-    Example: !gif-validate DONG --check-access
-```
-
-### Statistics & Analytics
-```
-!stats
-    Show overall bot usage statistics
-
-!stats-top [N]
-    Show top N most used commands (default: 10)
-
-!stats-user [USERNAME]
-    Show statistics for a specific user
-
-!stats-command COMMANDNAME
-    Show detailed statistics for a command
-```
-
-### Audit Logging
-```
-!audit [limit]
-    Show recent audit log entries (default: 20)
-
-!audit-stats
-    Show audit log statistics and summary
-```
-
-## Installation
-
-### Prerequisites
-- .NET 8.0 SDK or later
-- Discord Bot Token
-
-### Setup
-1. Clone the repository
-2. Create a `token.txt` file in `DongBot/bin/Debug/net6.0/` with your Discord bot token
-3. Build the solution:
-   ```
+   ```bash
    dotnet build
    ```
-4. Run the bot:
-   ```
+
+3. Run:
+
+   ```bash
    dotnet run --project DongBot
    ```
 
 ## Configuration
 
-### Required Files
+Primary settings are loaded from `DongBot/botconfig.json` via `BotConfig`:
 
-#### Bot Token
-Store your Discord bot token in `DongBot/bin/Debug/net6.0/token.txt`
+- `AdminChannelName` (default: `dongbot-admin`)
+- `BravesChannelName` (default: `baseball`)
+- `TokenFilePath` (default: `token.txt`)
+- `GifCommandsFilePath` (default: `gifcommands.json`)
+- `AuditLogFilePath` (default: `bot_audit.json`)
+- `StatisticsFilePath` (default: `bot_statistics.json`)
+- `UserErrorReportsFilePath` (default: `user_error_reports.json`)
 
-**⚠️ Never commit your token to version control!**
+## Commands
 
-#### GIF Commands (gifcommands.json)
-All GIF commands are stored in `gifcommands.json`. You can edit this file directly, then use `!gif-refresh` to reload.
+Use `!help` for channel-aware help output.
 
-**Example structure:**
-```json
-{
-  "commands": {
-    "DONG": {
-      "channel": "baseball",
-      "pattern": "DONG",
-      "isRegex": false,
-      "gifs": [
-        "https://media.giphy.com/media/example1.gif",
-        "https://media.giphy.com/media/example2.gif"
-      ],
-      "aliases": ["DINGER", "HOMERUN"],
-      "allowedChannels": [123456789012345678, 987654321098765432]
-    }
-  }
-}
-```
+### User-facing
 
-**Properties:**
-- `channel` (string): Legacy channel restriction by name (optional)
-- `pattern` (string): Command pattern to match
-- `isRegex` (bool): Whether pattern is a regular expression
-- `gifs` (array): List of GIF URLs
-- `aliases` (array): Alternative command names
-- `allowedChannels` (array): Channel IDs where command is allowed (null/empty = all channels)
+- `!<gif-command>` (example: `!dong`)
+- `!badbot [comment]` (report a bad response with optional user context)
+- `!braves-schedule`, `!braves-score`, `!braves-standings`, `!braves-roster`
+- `!mlb-schedule`, `!mlb-scores`, `!mlb-standings [filter]`
+- `!mlb-division [name]`, `!mlb-league [name]`, `!mlb-sport [name]`
+- `!mlb-team [name]`, `!mlb-venue [name]`
+- `!mlb-player [name]`, `!mlb-player-stats [name] [season]`
+- `!mlb-help`
 
-### Data Files
-The bot creates and manages several data files:
-- `gifcommands.json` - GIF command definitions
-- `bot_audit.json` - Audit log entries
-- `bot_statistics.json` - Usage statistics
-- `backups/` - Automatic backups of all data files
+### Admin-only (in configured admin channel)
 
-### Bot Token
-Store your Discord bot token in `DongBot/bin/Debug/net6.0/token.txt`
+- GIF admin: `!gif-add`, `!gif-remove`, `!gif-refresh`, `!gif-list`, `!gif-alias`, `!gif-channel`, `!gif-validate`
+- Reporting: `!audit`, `!audit-stats`, `!badbot-list [N]`, `!release-notes [version|range]` (sparse ranges allowed), `!stats`, `!stats-top`, `!stats-user`, `!stats-command`
+- Scheduler control: `!braves-scheduler-status`, `!braves-scheduler-enable`, `!braves-scheduler-disable`, `!braves-scheduler-test-daily`, `!braves-scheduler-test-weekly`
 
-**⚠️ Never commit your token to version control!**
+## Project Layout
 
-## Project Structure
-```
+```text
 DongBot/
-├── MainDong.cs              - Main bot entry point and command router
-├── DBActions.cs             - Command handlers and business logic
-├── GifCommandManager.cs     - GIF command management (load/save/process)
-├── AuditLogger.cs           - Audit logging system
-├── StatisticsTracker.cs     - Usage statistics and analytics
-├── BackupManager.cs         - Automatic backup system
-├── UrlValidator.cs          - URL validation with domain whitelist
-├── gifcommands.json         - GIF command configuration
-├── bot_audit.json           - Audit log data
-├── bot_statistics.json      - Statistics data
-├── backups/                 - Automatic backups directory
-└── token.txt               - Discord bot token (not in repo)
+├─ App/                  # Bot startup and Discord event handling
+├─ Commands/
+│  ├─ Admin/             # Admin/reporting command managers
+│  ├─ Gif/               # User GIF command manager
+│  └─ MLB/               # MLB + Braves command manager
+├─ Core/
+│  ├─ Config/            # BotConfig
+│  └─ Interfaces/        # ICommandManager, IMLBDataClient
+├─ Scheduling/           # BravesScheduler
+├─ Services/
+│  ├─ Gif/               # GifCommandService
+│  ├─ Lookup/            # Name/entity/standings resolver services
+│  ├─ Operations/        # Audit, backup, stats, URL validation, MLB API client
+│  └─ Reporting/         # AdminReportingService
+├─ gifcommands.json
+└─ botconfig.json
+
+DongBot.Tests/
+├─ App/
+├─ Commands/
+├─ Core/
+├─ Scheduling/
+├─ Services/
+└─ Shared/
 ```
 
-## System Architecture
+## Documentation
 
-### Core Components
+- Quick command reference: `QUICKREF.md`
+- Braves scheduler details: `docs/BRAVES_SCHEDULER.md`
+- Internal changelog: `docs/CHANGELOG_INTERNAL.md`
+- User release notes: `docs/RELEASE_NOTES_USER.md`
+- Admin release notes: `docs/RELEASE_NOTES_ADMIN.md`
+- Discord announcement template: `docs/RELEASE_NOTES_DISCORD.md`
 
-**MainDong.cs**
-- Discord client initialization and event handling
-- Command routing and permission checking
-- Admin channel enforcement (`#dongbot-admin`)
+## Versioning
 
-**DBActions.cs**
-- Business logic layer for all commands
-- Coordinates between managers
-- Handles command parsing and validation
+- Current app version: `2.0.0`
+- Version source of truth: `DongBot/DongBot.csproj` `<Version>`
+- CI guard: `.github/workflows/version-bump-required.yml`
+- Auto-tag workflow: `.github/workflows/auto-tag-from-version.yml`
+- Conventional PR title check: `.github/workflows/conventional-pr-title.yml`
+- PR checklist template: `.github/pull_request_template.md`
+- Version bump helper: `scripts/bump-version.ps1`
+- Policy: each push/PR must include a version increment in `DongBot/DongBot.csproj`
 
-**GifCommandManager.cs**
-- JSON-based command storage
-- Pattern matching (exact and regex)
-- Channel restriction checking
-- Alias resolution
-- Thread-safe file operations
+### Release Process (recommended)
 
-**AuditLogger.cs**
-- Tracks all administrative actions
-- Maintains limited history (configurable)
-- Provides audit queries and statistics
+1. Bump `DongBot/DongBot.csproj` version.
+2. Update `docs/CHANGELOG_INTERNAL.md` with technical details.
+3. Update `docs/RELEASE_NOTES_DISCORD.md` with user-facing notes.
+4. Post notes in Discord with `!release-notes [version|range]` from admin channel.
+5. Run `dotnet test`.
+6. Push and verify CI passes.
 
-**StatisticsTracker.cs**
-- Command usage tracking
-- User and channel analytics
-- Daily statistics
-- Trend analysis
+### Quick bump command
 
-**BackupManager.cs**
-- Automatic backups on load and save
-- Configurable retention (default: 10 backups)
-- Framework for timed backups (disabled by default)
+```powershell
+./scripts/bump-version.ps1 -Version 2.0.1
+```
 
-**UrlValidator.cs**
-- URL format validation
-- Domain whitelist (17 trusted GIF domains)
-- Optional HTTP accessibility checks
+## Notes
 
-## Development
-
-### Recent Improvements (March 2026)
-- ✅ Externalized GIF commands to JSON file system
-- ✅ Added comprehensive audit logging
-- ✅ Implemented statistics tracking
-- ✅ Added command aliases support
-- ✅ Implemented URL validation with domain whitelist
-- ✅ Added automatic backup system
-- ✅ Implemented multi-channel restrictions
-- ✅ Added admin channel permissions (`#dongbot-admin`)
-- ✅ Created context-aware help system
-- ✅ Removed legacy hardcoded GIF arrays
-- ✅ Thread-safe file operations throughout
-
-### Key Features Implemented
-1. **Audit Logging**: Generalized system tracks all bot operations
-2. **Statistics Tracking**: Command usage, user activity, and trends
-3. **Command Aliases**: Multiple triggers for same command
-4. **URL Validation**: Format checks, domain whitelist, optional accessibility tests
-5. **Auto-Backup**: On-load and pre-save backups with configurable retention
-6. **Multi-Channel Support**: Commands can be restricted to multiple channels
-7. **Permission Management**: Admin commands restricted to `#dongbot-admin`
-8. **Help System**: Channel-aware help showing relevant commands only
-
-### Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## Technical Details
-
-### Thread Safety
-All file operations use lock mechanisms to ensure thread-safe reads and writes across concurrent Discord message handlers.
-
-### Backup Strategy
-- **On Load**: Creates backup when loading data files
-- **Before Save**: Creates backup before writing changes
-- **Retention**: Keeps 10 most recent backups per file (configurable)
-- **Naming**: Format `{filename}_{reason}_{timestamp}.json`
-
-### Channel Restrictions
-Commands can be restricted in two ways:
-1. **Legacy**: Single channel by name (string)
-2. **Modern**: Multiple channels by ID (List<ulong>)
-
-When both are set, the modern AllowedChannels takes priority.
-
-### URL Validation
-Three validation levels:
-1. **Format**: Basic URI validation (always on)
-2. **Domain**: Whitelist of 17 trusted GIF domains (warns if not whitelisted)
-3. **Accessibility**: HTTP HEAD request to verify URL is accessible (optional)
-
-Whitelisted domains include: giphy.com, tenor.com, imgur.com, gfycat.com, and more.
-
-## Potential Future Enhancements
-
-### Not Yet Implemented
-- **Command Categories**: Organize commands by theme/category
-- **Rate Limiting**: Prevent command spam
-- **Scheduled Tasks**: Timed automatic backups
-- **Web Dashboard**: Web interface for bot management
-- **Database Integration**: Move from JSON to SQL/NoSQL database
-- **Embed Support**: Rich Discord embeds for responses
-- **Multi-Server**: Per-server command configurations
-
-See [IMPROVEMENTS.md](IMPROVEMENTS.md) for detailed recommendations.
-
-## Troubleshooting
-
-### Bot not responding
-- Check `token.txt` exists and contains valid token
-- Verify bot has proper Discord permissions
-- Check console output for errors
-
-### Commands not working in channel
-- Use `!help` to see commands available in that channel
-- Check channel restrictions with `!gif-list COMMANDNAME` in `#dongbot-admin`
-- Verify channel ID is in AllowedChannels list if restricted
-
-### Administrative commands not working
-- Ensure you're in the `#dongbot-admin` channel
-- Check bot has permission to send messages in that channel
-
-## License
-
-[Specify your license here]
-
-## Support
+- Keep secrets out of source control (`token.txt`, custom config values).
+- Test suite currently runs with `dotnet test` against `.NET 8`.
+- Contribution conventions: `CONTRIBUTING.md`
 
 For questions or issues, please use the GitHub issue tracker.
 
 ---
 
 **Last Updated**: March 2026  
-**Version**: 2.0 - Complete refactor with JSON system, analytics, and permissions
+**Version**: 2.0.0 - Complete refactor with JSON system, analytics, and permissions

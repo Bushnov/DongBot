@@ -1,0 +1,70 @@
+name: Version bump required
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  require-version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce version bump
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          else
+            echo "Unsupported event: ${GITHUB_EVENT_NAME}"
+            exit 1
+          fi
+
+          if [[ -z "${BASE_SHA}" || -z "${HEAD_SHA}" ]]; then
+            echo "Could not determine base/head SHAs."
+            exit 1
+          fi
+
+          CHANGED_FILES=$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")
+          if [[ -z "${CHANGED_FILES}" ]]; then
+            echo "No changed files detected."
+            exit 0
+          fi
+
+          echo "Changed files:"
+          echo "${CHANGED_FILES}"
+
+          PROJECT_FILE="DongBot/DongBot.csproj"
+
+          PROJECT_FILE_CHANGED=$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" -- "${PROJECT_FILE}")
+          if [[ -z "${PROJECT_FILE_CHANGED}" ]]; then
+            echo "Version bump required: ${PROJECT_FILE} was not changed."
+            exit 1
+          fi
+
+          BEFORE_VERSION=$(git show "${BASE_SHA}:${PROJECT_FILE}" | sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' | head -n 1)
+          AFTER_VERSION=$(git show "${HEAD_SHA}:${PROJECT_FILE}" | sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' | head -n 1)
+
+          if [[ -z "${BEFORE_VERSION}" || -z "${AFTER_VERSION}" ]]; then
+            echo "Could not parse <Version> from ${PROJECT_FILE}."
+            exit 1
+          fi
+
+          echo "Version before: ${BEFORE_VERSION}"
+          echo "Version after:  ${AFTER_VERSION}"
+
+          if [[ "${BEFORE_VERSION}" == "${AFTER_VERSION}" ]]; then
+            echo "Version bump required: <Version> did not change."
+            exit 1
+          fi
+
+          echo "Version bump check passed."
