@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -18,23 +18,40 @@ jobs:
         run: |
           set -euo pipefail
 
+          PROJECT_FILE="DongBot/DongBot.csproj"
+
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            BASE_REF="origin/${{ github.base_ref }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            DIFF_RANGE="${BASE_REF}...${HEAD_SHA}"
+            BEFORE_FILE_REF="${BASE_REF}:${PROJECT_FILE}"
           elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
             BASE_SHA="${{ github.event.before }}"
             HEAD_SHA="${{ github.sha }}"
+
+            if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
+              if git rev-parse "${HEAD_SHA}^" >/dev/null 2>&1; then
+                BASE_SHA=$(git rev-parse "${HEAD_SHA}^")
+              else
+                echo "No valid base commit available for first push; skipping version bump check."
+                exit 0
+              fi
+            fi
+
+            DIFF_RANGE="${BASE_SHA}..${HEAD_SHA}"
+            BEFORE_FILE_REF="${BASE_SHA}:${PROJECT_FILE}"
           else
             echo "Unsupported event: ${GITHUB_EVENT_NAME}"
             exit 1
           fi
 
-          if [[ -z "${BASE_SHA}" || -z "${HEAD_SHA}" ]]; then
-            echo "Could not determine base/head SHAs."
+          if [[ -z "${HEAD_SHA}" ]]; then
+            echo "Could not determine head SHA."
             exit 1
           fi
 
-          CHANGED_FILES=$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")
+          CHANGED_FILES=$(git diff --name-only ${DIFF_RANGE})
           if [[ -z "${CHANGED_FILES}" ]]; then
             echo "No changed files detected."
             exit 0
@@ -43,15 +60,13 @@ jobs:
           echo "Changed files:"
           echo "${CHANGED_FILES}"
 
-          PROJECT_FILE="DongBot/DongBot.csproj"
-
-          PROJECT_FILE_CHANGED=$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" -- "${PROJECT_FILE}")
+          PROJECT_FILE_CHANGED=$(git diff --name-only ${DIFF_RANGE} -- "${PROJECT_FILE}")
           if [[ -z "${PROJECT_FILE_CHANGED}" ]]; then
             echo "Version bump required: ${PROJECT_FILE} was not changed."
             exit 1
           fi
 
-          BEFORE_VERSION=$(git show "${BASE_SHA}:${PROJECT_FILE}" | sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' | head -n 1)
+          BEFORE_VERSION=$(git show "${BEFORE_FILE_REF}" | sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' | head -n 1)
           AFTER_VERSION=$(git show "${HEAD_SHA}:${PROJECT_FILE}" | sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' | head -n 1)
 
           if [[ -z "${BEFORE_VERSION}" || -z "${AFTER_VERSION}" ]]; then
