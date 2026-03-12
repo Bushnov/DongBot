@@ -36,7 +36,7 @@ namespace DongBot
         private int _initialized = 0;
         private int _shutdownStarted = 0;
         private const string ReleaseNotesChannelName = "dongdot";
-        private const string UserReleaseNotesRelativePath = "docs\\RELEASE_NOTES_USER.md";
+        private static readonly string UserReleaseNotesRelativePath = Path.Combine("docs", "RELEASE_NOTES_USER.md");
 
         public MainDong()
         {
