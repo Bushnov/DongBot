@@ -134,6 +134,51 @@ DongBot.Tests/
 - Test suite currently runs with `dotnet test` against `.NET 8`.
 - Contribution conventions: `CONTRIBUTING.md`
 
+## Maintainer: Private MLBStatsAPI Package
+
+`DongBot` consumes `MLBStatsAPI` from a private GitHub Packages NuGet feed.
+
+### Required PAT scopes (for consumers)
+- `read:packages`
+- `repo` (required for private repositories/packages)
+
+### Local restore setup
+`nuget.config` already includes these package sources:
+- `nuget.org`
+- `github-bushnov` => `https://nuget.pkg.github.com/Bushnov/index.json`
+
+Before restore/build/test locally, authenticate once:
+
+```powershell
+dotnet nuget remove source github-bushnov
+dotnet nuget add source "https://nuget.pkg.github.com/Bushnov/index.json" --name github-bushnov --username "Bushnov" --password "<YOUR_PAT>" --store-password-in-clear-text
+```
+
+Then run:
+
+```powershell
+dotnet restore DongBot.sln
+dotnet build DongBot.sln
+dotnet test DongBot.Tests/DongBot.Tests.csproj
+```
+
+### CI secret setup
+In the GitHub repository settings for `DongBot`, add secret:
+- `GH_PACKAGES_PAT` = PAT with `read:packages` + `repo`
+
+`build-and-test.yml` uses this secret before `dotnet restore`.
+
+### Common auth failures and quick fixes
+- `401 Unauthorized`
+   - PAT missing/expired/incorrect
+   - regenerate PAT and update local source or CI secret
+- `403 Forbidden`
+   - PAT lacks permissions (`read:packages`, `repo`) or package visibility access missing
+   - verify package owner/org access and token scopes
+- `NU1301`
+   - feed URL/auth/source configuration problem
+   - verify `nuget.config` source URL and run `dotnet nuget list source`
+
 For questions or issues, please use the GitHub issue tracker.
 
 ---

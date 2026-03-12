@@ -14,6 +14,7 @@ namespace DongBot
         private readonly GifCommandService _gifService;
         private readonly string _adminChannelName;
         private readonly StatisticsTracker _statisticsTracker;
+        private readonly bool _ownsTracker;
 
         public GifCommandManager(
             GifCommandService gifService,
@@ -22,6 +23,7 @@ namespace DongBot
         {
             _gifService = gifService;
             _adminChannelName = adminChannelName;
+            _ownsTracker = statisticsTracker == null;
             _statisticsTracker = statisticsTracker ?? new StatisticsTracker();
         }
 
@@ -113,7 +115,10 @@ namespace DongBot
 
         public void Dispose()
         {
-            // Shared services are owned elsewhere.
+            // Only dispose the tracker if this instance created it internally.
+            // Injected (shared) trackers are owned by the caller.
+            if (_ownsTracker)
+                _statisticsTracker.Dispose();
         }
     }
 }

@@ -134,6 +134,54 @@ public class MainDongMessageHandlingTests
     }
 
     [Fact]
+    public async Task HandleMessageAsync_RejectedSchedulerCommand_DoesNotRecordAsLastCommand()
+    {
+        MainDong sut = new();
+        StubCommandManager responder = new(canHandle: true, response: "ok-response");
+        sut.SetCommandManagersForTesting(new ICommandManager[] { responder });
+        List<string> sent = new();
+
+        // Land a successful command so it becomes the recorded last command.
+        await sut.HandleMessageAsync("!dong", false, "u1", "tester", "baseball", 1UL, m => { sent.Add(m); return Task.CompletedTask; });
+
+        // A scheduler command rejected due to wrong channel is not a successful interaction.
+        string nonAdmin = sut.AdminChannelNameForTesting + "-other";
+        await sut.HandleMessageAsync("!braves-scheduler-status", false, "u1", "tester", nonAdmin, 1UL, m => { sent.Add(m); return Task.CompletedTask; });
+
+        // badbot should still report the first successful command, not the rejected one.
+        await sut.HandleMessageAsync("!badbot", false, "u1", "tester", "baseball", 1UL, m => { sent.Add(m); return Task.CompletedTask; });
+
+        Assert.Equal(3, sent.Count);
+        Assert.Contains("!dong", sent[2]);
+        Assert.DoesNotContain("braves-scheduler-status", sent[2]);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ErrorManagerResponse_DoesNotRecordAsLastCommand()
+    {
+        MainDong sut = new();
+        StubCommandManager successResponder = new(canHandle: true, response: "ok-response");
+        sut.SetCommandManagersForTesting(new ICommandManager[] { successResponder });
+        List<string> sent = new();
+
+        // Land a successful command so it becomes the recorded last command.
+        await sut.HandleMessageAsync("!dong", false, "u1", "tester", "baseball", 1UL, m => { sent.Add(m); return Task.CompletedTask; });
+
+        // Switch to a manager that returns an error response.
+        StubCommandManager errorResponder = new(canHandle: true, response: "Error: command not available here");
+        sut.SetCommandManagersForTesting(new ICommandManager[] { errorResponder });
+        await sut.HandleMessageAsync("!badcommand", false, "u1", "tester", "baseball", 1UL, m => { sent.Add(m); return Task.CompletedTask; });
+
+        // badbot should still reflect the prior successful command, not the errored one.
+        sut.SetCommandManagersForTesting(new ICommandManager[] { successResponder });
+        await sut.HandleMessageAsync("!badbot", false, "u1", "tester", "baseball", 1UL, m => { sent.Add(m); return Task.CompletedTask; });
+
+        Assert.Equal(3, sent.Count);
+        Assert.Contains("!dong", sent[2]);
+        Assert.DoesNotContain("badcommand", sent[2]);
+    }
+
+    [Fact]
     public async Task HandleMessageAsync_ReleaseNotes_RejectsNonAdminChannel()
     {
         MainDong sut = new();

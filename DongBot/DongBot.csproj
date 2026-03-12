@@ -12,10 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Discord.Net" Version="3.18.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\MLBStatsAPI\MLBStatsAPI\MLBStatsAPI.csproj" />
+    <PackageReference Include="MLBStatsAPI" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DongBot
@@ -32,6 +33,8 @@ namespace DongBot
         private BravesScheduler? _bravesScheduler;
         private readonly object _lastCommandLock = new object();
         private readonly Dictionary<string, string> _lastCommandByUser = new Dictionary<string, string>();
+        private int _initialized = 0;
+        private int _shutdownStarted = 0;
         private const string ReleaseNotesChannelName = "dongdot";
         private const string UserReleaseNotesRelativePath = "docs\\RELEASE_NOTES_USER.md";
 
@@ -68,20 +71,14 @@ namespace DongBot
             await this._client.StartAsync();
 
             // Flush audit/stats on graceful shutdown (CTRL+C or process exit)
-            AppDomain.CurrentDomain.ProcessExit += (_, __) =>
-            {
-                _bravesScheduler?.Stop();
-                _auditLogger.Dispose();
-                _statisticsTracker.Dispose();
-                _userErrorReportLogger.Dispose();
-            };
+            // Both handlers delegate to ShutdownOnce() which is idempotent,
+            // so even if ProcessExit fires after CancelKeyPress calls Environment.Exit(0)
+            // the second invocation is a no-op.
+            AppDomain.CurrentDomain.ProcessExit += (_, __) => ShutdownOnce();
             Console.CancelKeyPress += (_, e) =>
             {
-                e.Cancel = true; // prevent abrupt termination � let ProcessExit fire
-                _bravesScheduler?.Stop();
-                _auditLogger.Dispose();
-                _statisticsTracker.Dispose();
-                _userErrorReportLogger.Dispose();
+                e.Cancel = true; // prevent abrupt termination – let ShutdownOnce handle cleanup
+                ShutdownOnce();
                 Environment.Exit(0);
             };
 
@@ -97,9 +94,17 @@ namespace DongBot
 
         /// <summary>
         /// Called when the bot is connected and ready.
+        /// Guard against duplicate initialization on reconnects: Discord's Ready event
+        /// can fire more than once (e.g., after a disconnection/reconnection cycle).
         /// </summary>
         private Task OnReady()
         {
+            if (Interlocked.CompareExchange(ref _initialized, 1, 0) != 0)
+            {
+                Console.WriteLine("Bot reconnected; reusing existing scheduler and managers.");
+                return Task.CompletedTask;
+            }
+
             Console.WriteLine($"Bot is connected as {_client.CurrentUser}");
 
             // Initialize and start the Braves scheduler
@@ -285,10 +290,10 @@ namespace DongBot
             );
 
             // Braves scheduler commands remain admin-only
+            // Do NOT record as last command – rejections are not successful interactions.
             if (command.ToUpper().StartsWith("BRAVES-SCHEDULER-") && !ctx.IsAdminChannel)
             {
                 await sendAsync($"Error: This command can only be used in #{_adminChannelName}");
-                RecordLastCommand(userId, command);
                 return;
             }
 
@@ -301,7 +306,10 @@ namespace DongBot
                 if (!string.IsNullOrEmpty(managerResponse))
                 {
                     await SendChunkedAsync(sendAsync, managerResponse);
-                    RecordLastCommand(userId, command);
+                    // Only record as last command when the response is a real success,
+                    // not a channel-gate rejection or other error.
+                    if (!IsErrorResponse(managerResponse))
+                        RecordLastCommand(userId, command);
                     return;
                 }
             }
@@ -422,8 +430,8 @@ namespace DongBot
                     return false;
                 }
 
-                Version lower = start <= end ? start : end;
-                Version upper = start <= end ? end : start;
+                Version lower = start! <= end! ? start! : end!;
+                Version upper = start! <= end! ? end! : start!;
 
                 List<string> matchingSections = headers
                     .Where(h => TryParseSemanticVersion(h.Version, out Version? parsed)
@@ -598,6 +606,29 @@ namespace DongBot
                 return _lastCommandByUser.TryGetValue(userId, out string? command) ? command : null;
             }
         }
+
+        /// <summary>
+        /// Idempotent shutdown: stops the scheduler and disposes all loggers.
+        /// Safe to call from both ProcessExit and CancelKeyPress; second call is a no-op.
+        /// </summary>
+        private void ShutdownOnce()
+        {
+            if (Interlocked.CompareExchange(ref _shutdownStarted, 1, 0) != 0)
+                return;
+
+            _bravesScheduler?.Stop();
+            _auditLogger.Dispose();
+            _statisticsTracker.Dispose();
+            _userErrorReportLogger.Dispose();
+        }
+
+        /// <summary>
+        /// Returns true if the manager response represents a known error or channel-gate
+        /// rejection, which should not overwrite the user's last successful command context.
+        /// </summary>
+        private static bool IsErrorResponse(string response)
+            => response.StartsWith("Error:", StringComparison.OrdinalIgnoreCase)
+            || response.StartsWith("\u274c"); // ❌
 
         internal void SetCommandManagersForTesting(IEnumerable<ICommandManager> managers)
         {
