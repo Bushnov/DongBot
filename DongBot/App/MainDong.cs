@@ -35,7 +35,7 @@ namespace DongBot
         private readonly Dictionary<string, string> _lastCommandByUser = new Dictionary<string, string>();
         private int _initialized = 0;
         private int _shutdownStarted = 0;
-        private const string ReleaseNotesChannelName = "dongdot";
+        private const string ReleaseNotesChannelName = "dongbot";
         private static readonly string UserReleaseNotesRelativePath = Path.Combine("docs", "RELEASE_NOTES_USER.md");
 
         public MainDong()
@@ -164,7 +164,7 @@ namespace DongBot
                 return;
             }
 
-            string[] lines = text.Split('\n');
+            string[] lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
             StringBuilder chunk = new StringBuilder();
 
             foreach (string line in lines)
@@ -296,7 +296,7 @@ namespace DongBot
                     return;
                 }
 
-                IMessageChannel? targetChannel = FindTextChannelByName(ReleaseNotesChannelName);
+                IMessageChannel? targetChannel = FindTextChannelByName(ReleaseNotesChannelName, guildId);
                 if (targetChannel == null)
                 {
                     await sendAsync($"❌ Could not find #{ReleaseNotesChannelName} channel.");
@@ -542,7 +542,6 @@ namespace DongBot
             string[] lines = section.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"📣 **DongBot Release Notes v{version}**");
-            sb.AppendLine();
 
             bool inCodeBlock = false;
             foreach (string rawLine in lines)
@@ -560,6 +559,11 @@ namespace DongBot
                 if (inCodeBlock)
                 {
                     sb.AppendLine(line);
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(line))
+                {
                     continue;
                 }
 
@@ -610,11 +614,18 @@ namespace DongBot
             return null;
         }
 
-        private IMessageChannel? FindTextChannelByName(string channelName)
+        private IMessageChannel? FindTextChannelByName(string channelName, ulong? guildId = null)
         {
             if (_client == null)
             {
                 return null;
+            }
+
+            if (guildId.HasValue)
+            {
+                SocketGuild? sourceGuild = _client.GetGuild(guildId.Value);
+                return sourceGuild?.TextChannels
+                    .FirstOrDefault(c => c.Name.Equals(channelName, StringComparison.OrdinalIgnoreCase));
             }
 
             foreach (SocketGuild guild in _client.Guilds)

@@ -69,7 +69,7 @@ Data persistence:
 
 ### 1b) New release publication command
 
-Admins can post user-facing release notes directly to `#dongdot`:
+Admins can post user-facing release notes directly to `#dongbot`:
 
 ```text
 !release-notes
