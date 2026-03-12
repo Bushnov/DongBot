@@ -6,14 +6,24 @@ Discord bot for GIF command delivery, MLB/Braves commands, admin auditing, and u
 
 - JSON-backed GIF command system with aliases, regex support, and channel restrictions
 - MLB command suite (scores, schedule, standings, team/player/venue lookups)
-- Braves scheduler for daily/weekly automated posts
-- Admin-only audit and statistics reporting
+- Braves scheduler for daily/weekly automated posts across all matching servers
+- Admin-only audit and statistics reporting with per-server filtering and server-partitioned breakdowns
 - Backups, URL validation, and command usage tracking
 
 ## Prerequisites
 
 - .NET 8 SDK
 - Discord bot token
+
+### SDK troubleshooting (`NETSDK1045`)
+
+If build output shows `NETSDK1045` (for example: "current .NET SDK does not support targeting .NET 8.0"), install a .NET 8 SDK and confirm with:
+
+```powershell
+dotnet --list-sdks
+```
+
+This repo includes `global.json` and expects an `8.x` SDK.
 
 ## Run Locally
 
@@ -63,6 +73,12 @@ Use `!help` for channel-aware help output.
 - Reporting: `!audit`, `!audit-stats`, `!badbot-list [N]`, `!release-notes [version|range]` (sparse ranges allowed), `!stats`, `!stats-top`, `!stats-user`, `!stats-command`
 - Scheduler control: `!braves-scheduler-status`, `!braves-scheduler-enable`, `!braves-scheduler-disable`, `!braves-scheduler-test-daily`, `!braves-scheduler-test-weekly`
 
+Scheduler and reporting behavior is guild-aware:
+
+- Scheduler posts to every guild that has the configured Braves channel name, with enable/disable state tracked independently per server.
+- `!audit`, `!audit-stats`, `!badbot-list`, `!stats`, and `!stats-top` return data for the current server.
+- `!stats-user` and `!stats-command` return global totals with a per-server breakdown.
+
 ## Project Layout
 
 ```text
@@ -104,7 +120,7 @@ DongBot.Tests/
 
 ## Versioning
 
-- Current app version: `2.0.0`
+- Current app version: `2.0.1`
 - Version source of truth: `DongBot/DongBot.csproj` `<Version>`
 - CI guard: `.github/workflows/version-bump-required.yml`
 - Auto-tag workflow: `.github/workflows/auto-tag-from-version.yml`
@@ -117,16 +133,46 @@ DongBot.Tests/
 
 1. Bump `DongBot/DongBot.csproj` version.
 2. Update `docs/CHANGELOG_INTERNAL.md` with technical details.
-3. Update `docs/RELEASE_NOTES_DISCORD.md` with user-facing notes.
-4. Post notes in Discord with `!release-notes [version|range]` from admin channel.
-5. Run `dotnet test`.
-6. Push and verify CI passes.
+3. Update `docs/RELEASE_NOTES_USER.md` and `docs/RELEASE_NOTES_ADMIN.md` with newest-first sections.
+4. Update `docs/RELEASE_NOTES_DISCORD.md` if you need a separate announcement draft.
+5. Post notes in Discord with `!release-notes [version|range]` from admin channel.
+6. Run `dotnet test`.
+7. Push and verify CI passes.
 
 ### Quick bump command
 
 ```powershell
 ./scripts/bump-version.ps1 -Version 2.0.1
 ```
+
+## Testing
+
+### Standard unit tests
+
+```powershell
+dotnet test DongBot.Tests/DongBot.Tests.csproj
+```
+
+### Live MLB API integration tests
+
+A separate set of tests makes real requests through the MLBStatsAPI SDK and are skipped by default.
+To run them, pass `DongBot.Tests/live.runsettings`:
+
+```powershell
+dotnet test DongBot.Tests/DongBot.Tests.csproj --settings DongBot.Tests/live.runsettings
+```
+
+Or set the environment variable manually for the current shell session:
+
+```powershell
+$env:DONGBOT_RUN_LIVE_MLB_TESTS = "1"
+dotnet test DongBot.Tests/DongBot.Tests.csproj
+```
+
+Live tests use the 2023 season and verify:
+- Pitchers → pitching + fielding sections only
+- Hitters → batting + baserunning + fielding sections only
+- Shohei Ohtani → all four sections
 
 ## Notes
 
@@ -184,4 +230,4 @@ For questions or issues, please use the GitHub issue tracker.
 ---
 
 **Last Updated**: March 2026  
-**Version**: 2.0.0 - Complete refactor with JSON system, analytics, and permissions
+**Version**: 2.0.1 - MLB reliability and release note ordering improvements

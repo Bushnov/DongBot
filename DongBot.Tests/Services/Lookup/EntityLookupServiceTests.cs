@@ -161,6 +161,9 @@ public class EntityLookupServiceTests
         public Task<ScheduleResponse?> GetTodaysScheduleAsync(int sportId, int? teamId = null)
             => Task.FromResult<ScheduleResponse?>(null);
 
+        public Task<StandingsResponse?> GetStandingsAsync(int? leagueId, int season)
+            => Task.FromResult<StandingsResponse?>(null);
+
         public Task<StandingsResponse?> GetDivisionStandingsAsync(int divisionId, int season)
             => Task.FromResult<StandingsResponse?>(null);
 
@@ -170,7 +173,7 @@ public class EntityLookupServiceTests
         public Task<string> GetRosterAsync(int teamId, int? season = null, string rosterType = "active")
             => Task.FromResult(string.Empty);
 
-        public Task<TeamsResponse?> GetTeamsAsync(int sportId)
+        public Task<TeamsResponse?> GetTeamsAsync(int sportId, int? season = null)
             => Task.FromResult(TeamsResponseResult);
 
         public Task<GameResponse?> GetGameAsync(int gamePk)
@@ -182,7 +185,7 @@ public class EntityLookupServiceTests
             return Task.FromResult(SearchPeopleResult);
         }
 
-        public Task<PeopleResponse?> GetPersonAsync(int playerId)
+        public Task<PeopleResponse?> GetPersonAsync(int playerId, int? season = null)
         {
             if (PersonById != null && PersonById.TryGetValue(playerId, out PeopleResponse? person))
             {

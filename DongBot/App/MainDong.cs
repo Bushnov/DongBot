@@ -51,7 +51,10 @@ namespace DongBot
         {
             this._config = new DiscordSocketConfig()
             {
-                GatewayIntents = GatewayIntents.All
+                // This bot only needs guild metadata and guild message content for prefix commands.
+                GatewayIntents = GatewayIntents.Guilds
+                    | GatewayIntents.GuildMessages
+                    | GatewayIntents.MessageContent
             };
             this._client = new DiscordSocketClient(_config);
             this._client.MessageReceived += this.CommandHandler;
@@ -193,6 +196,15 @@ namespace DongBot
 
         private async Task CommandHandler(SocketMessage message)
         {
+            // Extract guild info if this is a guild message
+            ulong guildId = 0;
+            string guildName = string.Empty;
+            if (message.Channel is IGuildChannel guildChannel)
+            {
+                guildId = guildChannel.GuildId;
+                guildName = guildChannel.Guild.Name;
+            }
+
             await HandleMessageAsync(
                 content: message.Content,
                 authorIsBot: message.Author.IsBot,
@@ -200,7 +212,21 @@ namespace DongBot
                 username: message.Author.Username,
                 channelName: message.Channel.Name,
                 channelId: message.Channel.Id,
+                guildId: guildId,
+                guildName: guildName,
                 sendAsync: text => message.Channel.SendMessageAsync(text));
+        }
+
+        internal Task HandleMessageAsync(
+            string content,
+            bool authorIsBot,
+            string userId,
+            string username,
+            string channelName,
+            ulong channelId,
+            Func<string, Task> sendAsync)
+        {
+            return HandleMessageAsync(content, authorIsBot, userId, username, channelName, channelId, 0, string.Empty, sendAsync);
         }
 
         internal async Task HandleMessageAsync(
@@ -210,6 +236,8 @@ namespace DongBot
             string username,
             string channelName,
             ulong channelId,
+            ulong guildId,
+            string guildName,
             Func<string, Task> sendAsync)
         {
             // Filter out if the message is a command or not
@@ -225,7 +253,7 @@ namespace DongBot
                 string comment = command.Length > 6 ? command.Substring(6).Trim() : string.Empty;
                 string? previousCommand = GetLastCommand(userId);
 
-                _userErrorReportLogger.LogReport(userId, username, channelName, previousCommand, comment);
+                _userErrorReportLogger.LogReport(userId, username, channelName, previousCommand, comment, guildId, guildName, channelId);
                 _auditLogger.Log(
                     userId,
                     username,
@@ -234,8 +262,10 @@ namespace DongBot
                     previousCommand ?? "NO_PREVIOUS_COMMAND",
                     string.IsNullOrWhiteSpace(comment) ? "No user comment provided." : comment,
                     channelName,
+                    guildId,
+                    guildName,
                     true);
-                _statisticsTracker.TrackCommand("BADBOT", "USER_REPORT", userId, username, channelName, true);
+                _statisticsTracker.TrackCommand("BADBOT", "USER_REPORT", userId, username, channelName, true, guildId, guildName);
 
                 string previousDisplay = previousCommand == null ? "(none found)" : $"!{previousCommand}";
                 string commentDisplay = string.IsNullOrWhiteSpace(comment) ? "(no comment provided)" : comment;
@@ -286,7 +316,9 @@ namespace DongBot
                 channelId,
                 IsAdminChannel(channelName),
                 userId,
-                username
+                username,
+                guildId,
+                guildName
             );
 
             // Braves scheduler commands remain admin-only
@@ -415,9 +447,15 @@ namespace DongBot
                 return false;
             }
 
+            List<(int Index, string Version, Version Parsed)> orderedHeaders = headers
+                .Select(h => (h.Index, h.Version, Parsed: TryParseSemanticVersion(h.Version, out Version? parsed) ? parsed! : new Version(0, 0, 0)))
+                .OrderByDescending(h => h.Parsed)
+                .ThenBy(h => h.Index)
+                .ToList();
+
             if (string.IsNullOrWhiteSpace(requestedArgument))
             {
-                var selected = headers.First();
+                var selected = orderedHeaders.First();
                 section = ExtractSection(lines, headers, selected.Index).Trim();
                 resolvedVersion = selected.Version;
                 return !string.IsNullOrWhiteSpace(section);
@@ -437,6 +475,8 @@ namespace DongBot
                     .Where(h => TryParseSemanticVersion(h.Version, out Version? parsed)
                         && parsed >= lower
                         && parsed <= upper)
+                    .OrderByDescending(h => Version.Parse(h.Version))
+                    .ThenBy(h => h.Index)
                     .Select(h => ExtractSection(lines, headers, h.Index).Trim())
                     .Where(s => !string.IsNullOrWhiteSpace(s))
                     .ToList();

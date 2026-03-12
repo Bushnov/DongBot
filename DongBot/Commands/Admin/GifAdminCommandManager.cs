@@ -49,30 +49,30 @@ namespace DongBot
             string upper = command.ToUpperInvariant();
 
             if (upper.StartsWith("GIF-ADD"))
-                return GifAdd(command, context.UserId, context.Username, context.ChannelName);
+                return GifAdd(command, context.UserId, context.Username, context.ChannelName, context.GuildId, context.GuildName);
 
             if (upper.StartsWith("GIF-REMOVE"))
-                return GifRemove(command, context.UserId, context.Username, context.ChannelName);
+                return GifRemove(command, context.UserId, context.Username, context.ChannelName, context.GuildId, context.GuildName);
 
             if (upper.Equals("GIF-REFRESH"))
-                return GifRefresh(context.UserId, context.Username, context.ChannelName);
+                return GifRefresh(context.UserId, context.Username, context.ChannelName, context.GuildId, context.GuildName);
 
             if (upper.StartsWith("GIF-LIST"))
-                return GifList(command, context.UserId, context.Username, context.ChannelName);
+                return GifList(command, context.UserId, context.Username, context.ChannelName, context.GuildId, context.GuildName);
 
             if (upper.StartsWith("GIF-ALIAS"))
-                return GifAlias(command, context.UserId, context.Username, context.ChannelName);
+                return GifAlias(command, context.UserId, context.Username, context.ChannelName, context.GuildId, context.GuildName);
 
             if (upper.StartsWith("GIF-CHANNEL"))
-                return GifChannel(command, context.UserId, context.Username, context.ChannelName);
+                return GifChannel(command, context.UserId, context.Username, context.ChannelName, context.GuildId, context.GuildName);
 
             if (upper.StartsWith("GIF-VALIDATE"))
-                return await GifValidate(command, context.UserId, context.Username, context.ChannelName);
+                return await GifValidate(command, context.UserId, context.Username, context.ChannelName, context.GuildId, context.GuildName);
 
             return string.Empty;
         }
 
-        private string GifAdd(string command, string userId, string username, string channelName)
+        private string GifAdd(string command, string userId, string username, string channelName, ulong guildId, string guildName)
         {
             try
             {
@@ -90,18 +90,18 @@ namespace DongBot
                 string result = _gifService.AddOrUpdateCommand(commandKey, gifUrl, channel, pattern, isRegex, aliases);
                 bool success = !result.Contains("Error", StringComparison.OrdinalIgnoreCase);
                 _auditLogger.Log(userId, username, "ADD", "GIF_COMMAND", commandKey,
-                    $"Added GIF: {gifUrl} (Channel: {(string.IsNullOrEmpty(channel) ? "All" : channel)})", channelName, success);
-                _statisticsTracker.TrackCommand("GIF-ADD", "ADMIN", userId, username, channelName, success);
+                    $"Added GIF: {gifUrl} (Channel: {(string.IsNullOrEmpty(channel) ? "All" : channel)})", channelName, guildId, guildName, success);
+                _statisticsTracker.TrackCommand("GIF-ADD", "ADMIN", userId, username, channelName, success, guildId, guildName);
                 return result;
             }
             catch (Exception ex)
             {
-                _auditLogger.Log(userId, username, "ADD", "GIF_COMMAND", "UNKNOWN", $"Failed: {ex.Message}", channelName, false);
+                _auditLogger.Log(userId, username, "ADD", "GIF_COMMAND", "UNKNOWN", $"Failed: {ex.Message}", channelName, guildId, guildName, false);
                 return $"Error processing gif-add command: {ex.Message}";
             }
         }
 
-        private string GifRemove(string command, string userId, string username, string channelName)
+        private string GifRemove(string command, string userId, string username, string channelName, ulong guildId, string guildName)
         {
             try
             {
@@ -115,52 +115,52 @@ namespace DongBot
                 string result = _gifService.RemoveCommand(commandKey, gifUrl);
                 bool success = !result.Contains("Error", StringComparison.OrdinalIgnoreCase);
                 string details = string.IsNullOrEmpty(gifUrl) ? "Removed entire command" : $"Removed GIF: {gifUrl}";
-                _auditLogger.Log(userId, username, "REMOVE", "GIF_COMMAND", commandKey, details, channelName, success);
-                _statisticsTracker.TrackCommand("GIF-REMOVE", "ADMIN", userId, username, channelName, success);
+                _auditLogger.Log(userId, username, "REMOVE", "GIF_COMMAND", commandKey, details, channelName, guildId, guildName, success);
+                _statisticsTracker.TrackCommand("GIF-REMOVE", "ADMIN", userId, username, channelName, success, guildId, guildName);
                 return result;
             }
             catch (Exception ex)
             {
-                _auditLogger.Log(userId, username, "REMOVE", "GIF_COMMAND", "UNKNOWN", $"Failed: {ex.Message}", channelName, false);
+                _auditLogger.Log(userId, username, "REMOVE", "GIF_COMMAND", "UNKNOWN", $"Failed: {ex.Message}", channelName, guildId, guildName, false);
                 return $"Error processing gif-remove command: {ex.Message}";
             }
         }
 
-        private string GifRefresh(string userId, string username, string channelName)
+        private string GifRefresh(string userId, string username, string channelName, ulong guildId, string guildName)
         {
             try
             {
                 _gifService.LoadCommands();
                 int count = _gifService.GetCommandCount();
-                _auditLogger.Log(userId, username, "REFRESH", "GIF_COMMAND", "ALL", $"Reloaded {count} commands from file", channelName, true);
-                _statisticsTracker.TrackCommand("GIF-REFRESH", "ADMIN", userId, username, channelName, true);
+                _auditLogger.Log(userId, username, "REFRESH", "GIF_COMMAND", "ALL", $"Reloaded {count} commands from file", channelName, guildId, guildName, true);
+                _statisticsTracker.TrackCommand("GIF-REFRESH", "ADMIN", userId, username, channelName, true, guildId, guildName);
                 return $"GIF commands refreshed! Loaded {count} commands.";
             }
             catch (Exception ex)
             {
-                _auditLogger.Log(userId, username, "REFRESH", "GIF_COMMAND", "ALL", $"Failed: {ex.Message}", channelName, false);
+                _auditLogger.Log(userId, username, "REFRESH", "GIF_COMMAND", "ALL", $"Failed: {ex.Message}", channelName, guildId, guildName, false);
                 return $"Error refreshing GIF commands: {ex.Message}";
             }
         }
 
-        private string GifList(string command, string userId, string username, string channelName)
+        private string GifList(string command, string userId, string username, string channelName, ulong guildId, string guildName)
         {
             try
             {
                 string[] parts = command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 string? commandKey = parts.Length > 1 ? parts[1] : null;
                 string result = _gifService.ListCommands(commandKey);
-                _statisticsTracker.TrackCommand("GIF-LIST", "ADMIN", userId, username, channelName, true);
+                _statisticsTracker.TrackCommand("GIF-LIST", "ADMIN", userId, username, channelName, true, guildId, guildName);
                 return result;
             }
             catch (Exception ex)
             {
-                _statisticsTracker.TrackCommand("GIF-LIST", "ADMIN", userId, username, channelName, false);
+                _statisticsTracker.TrackCommand("GIF-LIST", "ADMIN", userId, username, channelName, false, guildId, guildName);
                 return $"Error listing GIF commands: {ex.Message}";
             }
         }
 
-        private string GifAlias(string command, string userId, string username, string channelName)
+        private string GifAlias(string command, string userId, string username, string channelName, ulong guildId, string guildName)
         {
             try
             {
@@ -179,31 +179,31 @@ namespace DongBot
                     result = _gifService.AddAlias(commandKey, alias);
                     success = !result.Contains("Error", StringComparison.OrdinalIgnoreCase);
                     if (success)
-                        _auditLogger.Log(userId, username, "ADD_ALIAS", "GIF_COMMAND", commandKey, $"Added alias: {alias}", channelName, true);
+                        _auditLogger.Log(userId, username, "ADD_ALIAS", "GIF_COMMAND", commandKey, $"Added alias: {alias}", channelName, guildId, guildName, true);
                 }
                 else if (action == "remove")
                 {
                     result = _gifService.RemoveAlias(commandKey, alias);
                     success = !result.Contains("Error", StringComparison.OrdinalIgnoreCase);
                     if (success)
-                        _auditLogger.Log(userId, username, "REMOVE_ALIAS", "GIF_COMMAND", commandKey, $"Removed alias: {alias}", channelName, true);
+                        _auditLogger.Log(userId, username, "REMOVE_ALIAS", "GIF_COMMAND", commandKey, $"Removed alias: {alias}", channelName, guildId, guildName, true);
                 }
                 else
                 {
                     return "Invalid action. Use 'add' or 'remove'.";
                 }
 
-                _statisticsTracker.TrackCommand("GIF-ALIAS", "ADMIN", userId, username, channelName, success);
+                _statisticsTracker.TrackCommand("GIF-ALIAS", "ADMIN", userId, username, channelName, success, guildId, guildName);
                 return result;
             }
             catch (Exception ex)
             {
-                _statisticsTracker.TrackCommand("GIF-ALIAS", "ADMIN", userId, username, channelName, false);
+                _statisticsTracker.TrackCommand("GIF-ALIAS", "ADMIN", userId, username, channelName, false, guildId, guildName);
                 return $"Error managing alias: {ex.Message}";
             }
         }
 
-        private string GifChannel(string command, string userId, string username, string channelName)
+        private string GifChannel(string command, string userId, string username, string channelName, ulong guildId, string guildName)
         {
             try
             {
@@ -222,7 +222,7 @@ namespace DongBot
                     if (!ulong.TryParse(parts[3], out ulong addId)) return "Error: Invalid channel ID. Must be numeric.";
                     result = _gifService.AddAllowedChannel(commandKey, addId);
                     success = !result.Contains("Error", StringComparison.OrdinalIgnoreCase);
-                    if (success) _auditLogger.Log(userId, username, "ADD_CHANNEL_RESTRICTION", "GIF_COMMAND", commandKey, $"Added allowed channel: {addId}", channelName, true);
+                    if (success) _auditLogger.Log(userId, username, "ADD_CHANNEL_RESTRICTION", "GIF_COMMAND", commandKey, $"Added allowed channel: {addId}", channelName, guildId, guildName, true);
                 }
                 else if (action == "remove")
                 {
@@ -230,36 +230,36 @@ namespace DongBot
                     if (!ulong.TryParse(parts[3], out ulong removeId)) return "Error: Invalid channel ID. Must be numeric.";
                     result = _gifService.RemoveAllowedChannel(commandKey, removeId);
                     success = !result.Contains("Error", StringComparison.OrdinalIgnoreCase);
-                    if (success) _auditLogger.Log(userId, username, "REMOVE_CHANNEL_RESTRICTION", "GIF_COMMAND", commandKey, $"Removed allowed channel: {removeId}", channelName, true);
+                    if (success) _auditLogger.Log(userId, username, "REMOVE_CHANNEL_RESTRICTION", "GIF_COMMAND", commandKey, $"Removed allowed channel: {removeId}", channelName, guildId, guildName, true);
                 }
                 else if (action == "list")
                 {
                     result = _gifService.ListAllowedChannels(commandKey);
                     success = !result.Contains("Error", StringComparison.OrdinalIgnoreCase);
-                    if (success) _auditLogger.Log(userId, username, "LIST_CHANNEL_RESTRICTIONS", "GIF_COMMAND", commandKey, "Listed channel restrictions", channelName, true);
+                    if (success) _auditLogger.Log(userId, username, "LIST_CHANNEL_RESTRICTIONS", "GIF_COMMAND", commandKey, "Listed channel restrictions", channelName, guildId, guildName, true);
                 }
                 else if (action == "clear")
                 {
                     result = _gifService.ClearAllowedChannels(commandKey);
                     success = !result.Contains("Error", StringComparison.OrdinalIgnoreCase);
-                    if (success) _auditLogger.Log(userId, username, "CLEAR_CHANNEL_RESTRICTIONS", "GIF_COMMAND", commandKey, "Cleared all channel restrictions", channelName, true);
+                    if (success) _auditLogger.Log(userId, username, "CLEAR_CHANNEL_RESTRICTIONS", "GIF_COMMAND", commandKey, "Cleared all channel restrictions", channelName, guildId, guildName, true);
                 }
                 else
                 {
                     return "Invalid action. Use 'add', 'remove', 'list', or 'clear'.";
                 }
 
-                _statisticsTracker.TrackCommand("GIF-CHANNEL", "ADMIN", userId, username, channelName, success);
+                _statisticsTracker.TrackCommand("GIF-CHANNEL", "ADMIN", userId, username, channelName, success, guildId, guildName);
                 return result;
             }
             catch (Exception ex)
             {
-                _statisticsTracker.TrackCommand("GIF-CHANNEL", "ADMIN", userId, username, channelName, false);
+                _statisticsTracker.TrackCommand("GIF-CHANNEL", "ADMIN", userId, username, channelName, false, guildId, guildName);
                 return $"Error managing channel restrictions: {ex.Message}";
             }
         }
 
-        private async Task<string> GifValidate(string command, string userId, string username, string channelName)
+        private async Task<string> GifValidate(string command, string userId, string username, string channelName, ulong guildId, string guildName)
         {
             try
             {
@@ -274,20 +274,20 @@ namespace DongBot
                 {
                     string normalizedCommandKey = commandKey.ToUpperInvariant();
                     result = await _gifService.ValidateCommandUrlsAsync(normalizedCommandKey, checkAccessibility);
-                    _auditLogger.Log(userId, username, "VALIDATE", "GIF_COMMAND", normalizedCommandKey, $"Validated URLs (Accessibility check: {checkAccessibility})", channelName, true);
+                    _auditLogger.Log(userId, username, "VALIDATE", "GIF_COMMAND", normalizedCommandKey, $"Validated URLs (Accessibility check: {checkAccessibility})", channelName, guildId, guildName, true);
                 }
                 else
                 {
                     result = await _gifService.ValidateAllUrlsAsync(checkAccessibility);
-                    _auditLogger.Log(userId, username, "VALIDATE", "GIF_COMMAND", "ALL", $"Validated all URLs (Accessibility check: {checkAccessibility})", channelName, true);
+                    _auditLogger.Log(userId, username, "VALIDATE", "GIF_COMMAND", "ALL", $"Validated all URLs (Accessibility check: {checkAccessibility})", channelName, guildId, guildName, true);
                 }
 
-                _statisticsTracker.TrackCommand("GIF-VALIDATE", "ADMIN", userId, username, channelName, true);
+                _statisticsTracker.TrackCommand("GIF-VALIDATE", "ADMIN", userId, username, channelName, true, guildId, guildName);
                 return result;
             }
             catch (Exception ex)
             {
-                _statisticsTracker.TrackCommand("GIF-VALIDATE", "ADMIN", userId, username, channelName, false);
+                _statisticsTracker.TrackCommand("GIF-VALIDATE", "ADMIN", userId, username, channelName, false, guildId, guildName);
                 return $"Error validating URLs: {ex.Message}";
             }
         }

@@ -18,13 +18,14 @@ namespace DongBot.Tests
     {
         public Task<ScheduleResponse?> GetScheduleAsync(string startDate, string endDate, int sportId, int? teamId = null) => Task.FromResult<ScheduleResponse?>(null);
         public Task<ScheduleResponse?> GetTodaysScheduleAsync(int sportId, int? teamId = null) => Task.FromResult<ScheduleResponse?>(null);
+        public Task<StandingsResponse?> GetStandingsAsync(int? leagueId, int season) => Task.FromResult<StandingsResponse?>(null);
         public Task<StandingsResponse?> GetDivisionStandingsAsync(int divisionId, int season) => Task.FromResult<StandingsResponse?>(null);
         public Task<StandingsResponse?> GetCurrentStandingsAsync() => Task.FromResult<StandingsResponse?>(null);
         public Task<string> GetRosterAsync(int teamId, int? season = null, string rosterType = "active") => Task.FromResult<string>("");
-        public Task<TeamsResponse?> GetTeamsAsync(int sportId) => Task.FromResult<TeamsResponse?>(null);
+        public Task<TeamsResponse?> GetTeamsAsync(int sportId, int? season = null) => Task.FromResult<TeamsResponse?>(null);
         public Task<GameResponse?> GetGameAsync(int gamePk) => Task.FromResult<GameResponse?>(null);
         public Task<string> SearchPeopleAsync(string playerName, int sportId) => Task.FromResult<string>("");
-        public Task<PeopleResponse?> GetPersonAsync(int playerId) => Task.FromResult<PeopleResponse?>(null);
+        public Task<PeopleResponse?> GetPersonAsync(int playerId, int? season = null) => Task.FromResult<PeopleResponse?>(null);
         public Task<StatsResponse?> GetPlayerStatsAsync(int playerId, int season) => Task.FromResult<StatsResponse?>(null);
         public void Dispose() { }
     }

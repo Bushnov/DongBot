@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <DONGBOT_RUN_LIVE_MLB_TESTS>1</DONGBOT_RUN_LIVE_MLB_TESTS>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

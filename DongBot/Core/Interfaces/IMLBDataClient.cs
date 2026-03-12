@@ -8,13 +8,14 @@ namespace DongBot
     {
         Task<ScheduleResponse?> GetScheduleAsync(string startDate, string endDate, int sportId, int? teamId = null);
         Task<ScheduleResponse?> GetTodaysScheduleAsync(int sportId, int? teamId = null);
+        Task<StandingsResponse?> GetStandingsAsync(int? leagueId, int season);
         Task<StandingsResponse?> GetDivisionStandingsAsync(int divisionId, int season);
         Task<StandingsResponse?> GetCurrentStandingsAsync();
         Task<string> GetRosterAsync(int teamId, int? season = null, string rosterType = "active");
-        Task<TeamsResponse?> GetTeamsAsync(int sportId);
+        Task<TeamsResponse?> GetTeamsAsync(int sportId, int? season = null);
         Task<GameResponse?> GetGameAsync(int gamePk);
         Task<string> SearchPeopleAsync(string playerName, int sportId);
-        Task<PeopleResponse?> GetPersonAsync(int playerId);
+        Task<PeopleResponse?> GetPersonAsync(int playerId, int? season = null);
         Task<StatsResponse?> GetPlayerStatsAsync(int playerId, int season);
     }
 }

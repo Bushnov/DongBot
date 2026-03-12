@@ -149,7 +149,7 @@ namespace DongBot
         /// Log a user action. The entry is held in memory and written to disk within 30 seconds.
         /// </summary>
         public void Log(string userId, string username, string action, string category,
-                       string target, string details, string? channelName = null, bool success = true)
+                       string target, string details, string? channelName = null, ulong guildId = 0, string? guildName = null, bool success = true)
         {
             lock (_lock)
             {
@@ -165,6 +165,8 @@ namespace DongBot
                         Target = target,
                         Details = details,
                         ChannelName = channelName,
+                        GuildId = guildId,
+                        GuildName = guildName,
                         Success = success
                     };
 
@@ -193,17 +195,36 @@ namespace DongBot
         }
 
         /// <summary>
+        /// Backward-compatible overload for callers that do not provide guild metadata.
+        /// </summary>
+        public void Log(string userId, string username, string action, string category,
+                       string target, string details, string? channelName, bool success)
+        {
+            Log(userId, username, action, category, target, details, channelName, 0, null, success);
+        }
+
+        /// <summary>
         /// Log a system event (no user involved).
         /// </summary>
         public void LogSystem(string action, string category, string target, string details, bool success = true)
         {
-            Log("SYSTEM", "System", action, category, target, details, null, success);
+            Log(
+                userId: "SYSTEM",
+                username: "System",
+                action: action,
+                category: category,
+                target: target,
+                details: details,
+                channelName: null,
+                guildId: 0,
+                guildName: null,
+                success: success);
         }
 
         /// <summary>
-        /// Get recent audit entries, optionally filtered by category and/or user.
+        /// Get recent audit entries, optionally filtered by category, user, and/or guild.
         /// </summary>
-        public List<AuditEntry> GetRecentEntries(int count = 50, string? category = null, string? userId = null)
+        public List<AuditEntry> GetRecentEntries(int count = 50, string? category = null, string? userId = null, ulong? guildId = null)
         {
             lock (_lock)
             {
@@ -214,6 +235,9 @@ namespace DongBot
 
                 if (!string.IsNullOrWhiteSpace(userId))
                     entries = entries.Where(e => e.UserId == userId);
+
+                if (guildId.HasValue && guildId.Value != 0)
+                    entries = entries.Where(e => e.GuildId == guildId.Value);
 
                 return entries.Take(count).ToList();
             }
@@ -238,24 +262,28 @@ namespace DongBot
         }
 
         /// <summary>
-        /// Get aggregate statistics about the audit log.
+        /// Get aggregate statistics about the audit log, optionally filtered by guild.
         /// </summary>
-        public AuditStatistics GetStatistics()
+        public AuditStatistics GetStatistics(ulong? guildId = null)
         {
             lock (_lock)
             {
+                IEnumerable<AuditEntry> entries = _auditLog.Entries;
+                if (guildId.HasValue && guildId.Value != 0)
+                    entries = entries.Where(e => e.GuildId == guildId.Value);
+
                 return new AuditStatistics
                 {
-                    TotalEntries = _auditLog.Entries.Count,
-                    UniqueUsers = _auditLog.Entries.Select(e => e.UserId).Distinct().Count(),
-                    ActionCounts = _auditLog.Entries
+                    TotalEntries = entries.Count(),
+                    UniqueUsers = entries.Select(e => e.UserId).Distinct().Count(),
+                    ActionCounts = entries
                         .GroupBy(e => e.Action)
                         .ToDictionary(g => g.Key, g => g.Count()),
-                    CategoryCounts = _auditLog.Entries
+                    CategoryCounts = entries
                         .GroupBy(e => e.Category)
                         .ToDictionary(g => g.Key, g => g.Count()),
-                    OldestEntry = _auditLog.Entries.OrderBy(e => e.Timestamp).FirstOrDefault()?.Timestamp,
-                    NewestEntry = _auditLog.Entries.OrderByDescending(e => e.Timestamp).FirstOrDefault()?.Timestamp
+                    OldestEntry = entries.OrderBy(e => e.Timestamp).FirstOrDefault()?.Timestamp,
+                    NewestEntry = entries.OrderByDescending(e => e.Timestamp).FirstOrDefault()?.Timestamp
                 };
             }
         }
@@ -284,6 +312,8 @@ namespace DongBot
         public string Target { get; set; } = string.Empty;
         public string Details { get; set; } = string.Empty;
         public string? ChannelName { get; set; }
+        public ulong GuildId { get; set; }
+        public string? GuildName { get; set; }
         public bool Success { get; set; }
     }
 

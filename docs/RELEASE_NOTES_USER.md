@@ -2,6 +2,28 @@
 
 Audience: all Discord users of DongBot commands.
 
+## v2.0.1 (2026-03-12)
+
+This update improves MLB command reliability and makes player output more accurate.
+
+### Highlights
+- `!mlb-player-stats` now shows stat sections based on player role more reliably.
+- `!mlb-player` now includes a health/status line when roster status is available.
+- MLB lookups now handle off-season API gaps more gracefully.
+
+### Improvements
+- Pitchers now show pitching + fielding sections instead of incorrectly surfacing hitter-first output.
+- Position players continue to show batting, baserunning, and fielding sections.
+- Shohei Ohtani is handled as a two-way player and shows both hitting and pitching sections.
+- `!mlb-team`, `!mlb-player`, and standings-related commands now make a best effort to use historical data when current-season MLB API responses are sparse.
+
+### Fixes
+- Fixed cases where pitcher lookups could display batting output when current stats happened to include hitting data.
+- Fixed missing player health information when active-roster status is present in roster data.
+- Reduced off-season failures for standings and profile lookups.
+
+---
+
 ## v2.0.0 (2026-03-11)
 
 This is a major update that introduces MLB features to users for the first time and adds a direct user feedback command.

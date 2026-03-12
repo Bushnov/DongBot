@@ -13,7 +13,7 @@ public class AdminAndGifAdminCoverageTests
         tracker.TrackCommand("DONG", "GIF", "u1", "tester", "baseball", true);
         AdminReportingService reportingService = new(auditLogger, tracker);
         AdminCommandManager manager = new(reportingService, "dongbot-admin");
-        CommandContext context = new("dongbot-admin", 1UL, true, "u1", "tester");
+        CommandContext context = new("dongbot-admin", 1UL, true, "u1", "tester", 100UL, "test-guild");
 
         string auditStats = await manager.ProcessCommandAsync("AUDIT-STATS", context);
         string top = await manager.ProcessCommandAsync("STATS-TOP 5", context);
@@ -38,8 +38,8 @@ public class AdminAndGifAdminCoverageTests
         using StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
         AdminCommandManager manager = new(new AdminReportingService(auditLogger, tracker), "dongbot-admin");
 
-        string adminHelp = manager.GetHelp(new CommandContext("dongbot-admin", 1UL, true, "u1", "tester"));
-        string userHelp = manager.GetHelp(new CommandContext("baseball", 2UL, false, "u2", "viewer"));
+        string adminHelp = manager.GetHelp(new CommandContext("dongbot-admin", 1UL, true, "u1", "tester", 100UL, "test-guild"));
+        string userHelp = manager.GetHelp(new CommandContext("baseball", 2UL, false, "u2", "viewer", 100UL, "test-guild"));
 
         Assert.Contains("Audit & Statistics Commands", adminHelp);
         Assert.Contains("!badbot-list", adminHelp, System.StringComparison.OrdinalIgnoreCase);
@@ -54,7 +54,7 @@ public class AdminAndGifAdminCoverageTests
         using AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
         using StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
         GifAdminCommandManager manager = new(service, auditLogger, tracker, "dongbot-admin");
-        CommandContext context = new("dongbot-admin", 1UL, true, "u1", "tester");
+        CommandContext context = new("dongbot-admin", 1UL, true, "u1", "tester", 100UL, "test-guild");
 
         await manager.ProcessCommandAsync("GIF-ADD DONG https://giphy.com/test.gif", context);
 
@@ -92,8 +92,8 @@ public class AdminAndGifAdminCoverageTests
         using StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
         GifAdminCommandManager manager = new(service, auditLogger, tracker, "dongbot-admin");
 
-        string adminHelp = manager.GetHelp(new CommandContext("dongbot-admin", 1UL, true, "u1", "tester"));
-        string userHelp = manager.GetHelp(new CommandContext("baseball", 2UL, false, "u2", "viewer"));
+        string adminHelp = manager.GetHelp(new CommandContext("dongbot-admin", 1UL, true, "u1", "tester", 100UL, "test-guild"));
+        string userHelp = manager.GetHelp(new CommandContext("baseball", 2UL, false, "u2", "viewer", 100UL, "test-guild"));
 
         Assert.Contains("GIF Administrative Commands", adminHelp);
         Assert.Equal(string.Empty, userHelp);

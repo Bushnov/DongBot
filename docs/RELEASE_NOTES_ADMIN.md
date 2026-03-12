@@ -2,6 +2,35 @@
 
 Audience: bot operators/admin-channel users.
 
+## v2.0.1 (2026-03-12)
+
+This release tightens MLB command correctness and improves release note maintenance behavior.
+
+---
+
+## Operational Changes
+
+### 1) MLB command reliability improvements
+- `!mlb-player-stats` now uses stricter player-role rendering rules.
+- `!mlb-player` now includes roster-derived health/status when available.
+- MLB team/player/standings paths now attempt historical season fallbacks during off-season sparse API periods.
+
+### 2) Release notes workflow hardening
+- `!release-notes [version|range]` continues to post user notes from `docs/RELEASE_NOTES_USER.md`.
+- Release-note extraction now prefers semantic version order for “latest” and version ranges, rather than relying only on file order.
+- The version bump helper now prepends starter sections to:
+  - `docs/CHANGELOG_INTERNAL.md`
+  - `docs/RELEASE_NOTES_USER.md`
+  - `docs/RELEASE_NOTES_ADMIN.md`
+  - `docs/RELEASE_NOTES_DISCORD.md`
+- Operational expectation remains newest-first sections at the top of each notes file.
+
+### 3) Verification updates
+- Unit test coverage now includes release-note ordering behavior when file sections are misordered.
+- Live MLB API coverage was expanded and validated under gated test execution.
+
+---
+
 ## v2.0.0 (2026-03-11)
 
 This release introduces a major refactor, stronger release governance, and new operational reporting workflows.

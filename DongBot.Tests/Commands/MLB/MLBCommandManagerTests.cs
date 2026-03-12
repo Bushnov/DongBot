@@ -26,11 +26,13 @@ public class MLBCommandManagerTests
     {
         FakeBravesSchedulerControl scheduler = new();
         using MLBCommandManager manager = new(scheduler, new FakeMlbDataClient());
+        CommandContext guildContext = new("baseball", 123UL, false, "u1", "tester", 777UL, "Guild 777");
 
-        string result = await manager.ProcessCommandAsync("BRAVES-SCHEDULER-ENABLE", DefaultContext);
+        string result = await manager.ProcessCommandAsync("BRAVES-SCHEDULER-ENABLE", guildContext);
 
         Assert.True(scheduler.EnableCalled);
-        Assert.Equal("Braves scheduler enabled.", result);
+        Assert.Equal(777UL, scheduler.LastEnableGuildId);
+        Assert.Equal("Braves scheduler enabled for this server.", result);
     }
 
     [Fact]
@@ -38,10 +40,25 @@ public class MLBCommandManagerTests
     {
         FakeBravesSchedulerControl scheduler = new FakeBravesSchedulerControl { DailyResponse = "daily-ok" };
         using MLBCommandManager manager = new(scheduler, new FakeMlbDataClient());
+        CommandContext guildContext = new("baseball", 123UL, false, "u1", "tester", 888UL, "Guild 888");
 
-        string result = await manager.ProcessCommandAsync("BRAVES-SCHEDULER-TEST-DAILY", DefaultContext);
+        string result = await manager.ProcessCommandAsync("BRAVES-SCHEDULER-TEST-DAILY", guildContext);
 
         Assert.Equal("daily-ok", result);
+        Assert.Equal(888UL, scheduler.LastDailyGuildId);
+    }
+
+    [Fact]
+    public async Task ProcessCommandAsync_BravesSchedulerTestWeekly_ForwardsGuildId()
+    {
+        FakeBravesSchedulerControl scheduler = new();
+        using MLBCommandManager manager = new(scheduler, new FakeMlbDataClient());
+        CommandContext guildContext = new("baseball", 123UL, false, "u1", "tester", 889UL, "Guild 889");
+
+        string result = await manager.ProcessCommandAsync("BRAVES-SCHEDULER-TEST-WEEKLY", guildContext);
+
+        Assert.Equal("weekly", result);
+        Assert.Equal(889UL, scheduler.LastWeeklyGuildId);
     }
 
     [Fact]
@@ -636,6 +653,239 @@ public class MLBCommandManagerTests
     }
 
     [Fact]
+    public async Task ProcessCommandAsync_MlbPlayerStats_PitcherRole_ShowsPitchingAndFieldingOnly()
+    {
+        FakeMlbDataClient mlbClient = new FakeMlbDataClient
+        {
+            SearchPeopleResult = "{\"people\":[{\"id\":675911,\"fullName\":\"Spencer Strider\"}]}",
+            PersonResponseResult = new PeopleResponse
+            {
+                People = new List<Person>
+                {
+                    new Person
+                    {
+                        Id = 675911,
+                        FullName = "Spencer Strider",
+                        PrimaryPosition = new Position { Name = "Pitcher", Type = "Pitcher", Abbreviation = "P", Code = "1" }
+                    }
+                }
+            },
+            PlayerStatsResponseResult = new StatsResponse
+            {
+                Stats = new List<StatGroup>
+                {
+                    new StatGroup
+                    {
+                        Splits = new List<StatSplit>
+                        {
+                            new StatSplit
+                            {
+                                Team = new Team { Name = "Atlanta Braves" },
+                                Stat = new PlayerStats
+                                {
+                                    AtBats = 12,
+                                    Avg = ".208",
+                                    StolenBases = 2,
+                                    Wins = 20,
+                                    Losses = 5,
+                                    Era = "3.00",
+                                    InningsPitched = "186.2",
+                                    StrikeOuts = 281,
+                                    Assists = 5,
+                                    PutOuts = 15,
+                                    Errors = 0,
+                                    FieldingPercentage = "1.000",
+                                    Chances = 20,
+                                    DoublePlays = 1
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        using MLBCommandManager manager = new(null, mlbClient);
+
+        string result = await manager.ProcessCommandAsync("MLB-PLAYER-STATS Spencer Strider 2023", DefaultContext);
+
+        Assert.Contains("Pitching Stats", result);
+        Assert.Contains("Fielding Stats", result);
+        Assert.DoesNotContain("Batting Stats", result);
+        Assert.DoesNotContain("Baserunning Stats", result);
+    }
+
+    [Fact]
+    public async Task ProcessCommandAsync_MlbPlayerStats_HitterRole_ShowsBattingBaserunningAndFieldingOnly()
+    {
+        FakeMlbDataClient mlbClient = new FakeMlbDataClient
+        {
+            SearchPeopleResult = "{\"people\":[{\"id\":660670,\"fullName\":\"Ronald Acuna Jr.\"}]}",
+            PersonResponseResult = new PeopleResponse
+            {
+                People = new List<Person>
+                {
+                    new Person
+                    {
+                        Id = 660670,
+                        FullName = "Ronald Acuna Jr.",
+                        PrimaryPosition = new Position { Name = "Right Field", Type = "Outfielder", Abbreviation = "RF", Code = "9" }
+                    }
+                }
+            },
+            PlayerStatsResponseResult = new StatsResponse
+            {
+                Stats = new List<StatGroup>
+                {
+                    new StatGroup
+                    {
+                        Splits = new List<StatSplit>
+                        {
+                            new StatSplit
+                            {
+                                Team = new Team { Name = "Atlanta Braves" },
+                                Stat = new PlayerStats
+                                {
+                                    AtBats = 643,
+                                    Avg = ".337",
+                                    Obp = ".416",
+                                    Slg = ".596",
+                                    Ops = "1.012",
+                                    StolenBases = 73,
+                                    CaughtStealing = 14,
+                                    Assists = 8,
+                                    PutOuts = 280,
+                                    Errors = 5,
+                                    FieldingPercentage = ".983",
+                                    Chances = 293,
+                                    DoublePlays = 2,
+                                    Era = "4.50",
+                                    InningsPitched = "2.0"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        using MLBCommandManager manager = new(null, mlbClient);
+
+        string result = await manager.ProcessCommandAsync("MLB-PLAYER-STATS Ronald Acuna 2023", DefaultContext);
+
+        Assert.Contains("Batting Stats", result);
+        Assert.Contains("Baserunning Stats", result);
+        Assert.Contains("Fielding Stats", result);
+        Assert.DoesNotContain("Pitching Stats", result);
+    }
+
+    [Fact]
+    public async Task ProcessCommandAsync_MlbPlayerStats_ShoheiRole_ShowsAllSections()
+    {
+        FakeMlbDataClient mlbClient = new FakeMlbDataClient
+        {
+            SearchPeopleResult = "{\"people\":[{\"id\":660271,\"fullName\":\"Shohei Ohtani\"}]}",
+            PersonResponseResult = new PeopleResponse
+            {
+                People = new List<Person>
+                {
+                    new Person
+                    {
+                        Id = 660271,
+                        FullName = "Shohei Ohtani",
+                        PrimaryPosition = new Position { Name = "Pitcher", Type = "Pitcher", Abbreviation = "P", Code = "1" }
+                    }
+                }
+            },
+            PlayerStatsResponseResult = new StatsResponse
+            {
+                Stats = new List<StatGroup>
+                {
+                    new StatGroup
+                    {
+                        Splits = new List<StatSplit>
+                        {
+                            new StatSplit
+                            {
+                                Team = new Team { Name = "Los Angeles Dodgers" },
+                                Stat = new PlayerStats
+                                {
+                                    AtBats = 497,
+                                    Avg = ".304",
+                                    Obp = ".412",
+                                    Slg = ".654",
+                                    Ops = "1.066",
+                                    StolenBases = 20,
+                                    CaughtStealing = 3,
+                                    Wins = 10,
+                                    Losses = 5,
+                                    Era = "3.14",
+                                    InningsPitched = "132.0",
+                                    StrikeOuts = 167,
+                                    Assists = 3,
+                                    PutOuts = 30,
+                                    Errors = 1,
+                                    FieldingPercentage = ".971",
+                                    Chances = 34,
+                                    DoublePlays = 1
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        using MLBCommandManager manager = new(null, mlbClient);
+
+        string result = await manager.ProcessCommandAsync("MLB-PLAYER-STATS Shohei Ohtani 2023", DefaultContext);
+
+        Assert.Contains("Batting Stats", result);
+        Assert.Contains("Baserunning Stats", result);
+        Assert.Contains("Pitching Stats", result);
+        Assert.Contains("Fielding Stats", result);
+    }
+
+    [Fact]
+    public async Task ProcessCommandAsync_MlbPlayer_WhenRosterStatusAvailable_IncludesHealthRow()
+    {
+        FakeMlbDataClient mlbClient = new FakeMlbDataClient
+        {
+            SearchPeopleResult = "{\"people\":[{\"id\":660670,\"fullName\":\"Ronald Acuna Jr.\"}]}",
+            PersonResponseResult = new PeopleResponse
+            {
+                People = new List<Person>
+                {
+                    new Person
+                    {
+                        Id = 660670,
+                        FullName = "Ronald Acuna Jr.",
+                        PrimaryNumber = "13",
+                        BirthDate = "1997-12-18",
+                        Height = "6' 0\"",
+                        Weight = 205,
+                        PrimaryPosition = new Position { Name = "Right Fielder" },
+                        CurrentTeam = new Team { Id = TeamIds.AtlantaBraves, Name = "Atlanta Braves" },
+                        BatSide = new BatSide { Code = "R" },
+                        PitchHand = new PitchHand { Code = "R" }
+                    }
+                }
+            },
+            PlayerStatsResponseResult = new StatsResponse { Stats = new List<StatGroup>() },
+            RosterJsonByType = new Dictionary<string, string>
+            {
+                ["active"] = "{\"roster\":[{\"person\":{\"id\":660670},\"status\":{\"description\":\"Day-To-Day\"}}]}"
+            }
+        };
+
+        using MLBCommandManager manager = new(null, mlbClient);
+
+        string result = await manager.ProcessCommandAsync("MLB-PLAYER Ronald Acuna", DefaultContext);
+
+        Assert.Contains("**Health:** Day-To-Day", result);
+    }
+
+    [Fact]
     public async Task ProcessCommandAsync_MlbPlayerStats_SelectsBestApiNameMatchNotFirst()
     {
         FakeMlbDataClient mlbClient = new FakeMlbDataClient
@@ -932,12 +1182,15 @@ public class MLBCommandManagerTests
     {
         FakeBravesSchedulerControl scheduler = new FakeBravesSchedulerControl();
         using MLBCommandManager manager = new(scheduler, new FakeMlbDataClient());
+        CommandContext guildContext = new("baseball", 123UL, false, "u1", "tester", 999UL, "Guild 999");
 
-        string status = await manager.ProcessCommandAsync("BRAVES-SCHEDULER-STATUS", DefaultContext);
-        string disable = await manager.ProcessCommandAsync("BRAVES-SCHEDULER-DISABLE", DefaultContext);
+        string status = await manager.ProcessCommandAsync("BRAVES-SCHEDULER-STATUS", guildContext);
+        string disable = await manager.ProcessCommandAsync("BRAVES-SCHEDULER-DISABLE", guildContext);
 
         Assert.Equal("enabled", status);
-        Assert.Equal("Braves scheduler disabled.", disable);
+        Assert.Equal("Braves scheduler disabled for this server.", disable);
+        Assert.Equal(999UL, scheduler.LastStatusGuildId);
+        Assert.Equal(999UL, scheduler.LastDisableGuildId);
         Assert.True(scheduler.DisableCalled);
     }
 
@@ -994,12 +1247,41 @@ public class MLBCommandManagerTests
         public bool EnableCalled { get; private set; }
         public bool DisableCalled { get; private set; }
         public string DailyResponse { get; set; } = "ok";
+        public ulong LastEnableGuildId { get; private set; }
+        public ulong LastDisableGuildId { get; private set; }
+        public ulong LastStatusGuildId { get; private set; }
+        public ulong LastDailyGuildId { get; private set; }
+        public ulong LastWeeklyGuildId { get; private set; }
 
-        public void Enable() => EnableCalled = true;
-        public void Disable() => DisableCalled = true;
-        public string GetStatus() => "enabled";
-        public Task<string> TriggerDailyPost() => Task.FromResult(DailyResponse);
-        public Task<string> TriggerWeeklyPost() => Task.FromResult("weekly");
+        public void Enable(ulong guildId)
+        {
+            EnableCalled = true;
+            LastEnableGuildId = guildId;
+        }
+
+        public void Disable(ulong guildId)
+        {
+            DisableCalled = true;
+            LastDisableGuildId = guildId;
+        }
+
+        public string GetStatus(ulong guildId)
+        {
+            LastStatusGuildId = guildId;
+            return "enabled";
+        }
+
+        public Task<string> TriggerDailyPost(ulong guildId)
+        {
+            LastDailyGuildId = guildId;
+            return Task.FromResult(DailyResponse);
+        }
+
+        public Task<string> TriggerWeeklyPost(ulong guildId)
+        {
+            LastWeeklyGuildId = guildId;
+            return Task.FromResult("weekly");
+        }
     }
 
     private sealed class FakeMlbDataClient : IMLBDataClient
@@ -1012,8 +1294,10 @@ public class MLBCommandManagerTests
         public bool GetPersonCalled { get; private set; }
         public bool ThrowOnGetTodaysSchedule { get; set; }
         public string RosterJson { get; set; } = "{\"roster\":[]}";
+        public Dictionary<string, string>? RosterJsonByType { get; set; }
         public ScheduleResponse? ScheduleResponseResult { get; set; }
         public ScheduleResponse? TodaysScheduleResponseResult { get; set; }
+        public StandingsResponse? GetStandingsResult { get; set; }
         public StandingsResponse? DivisionStandingsResponseResult { get; set; }
         public StandingsResponse? CurrentStandingsResponseResult { get; set; }
         public TeamsResponse? TeamsResponseResult { get; set; }
@@ -1040,6 +1324,9 @@ public class MLBCommandManagerTests
             return Task.FromResult(TodaysScheduleResponseResult);
         }
 
+        public Task<StandingsResponse?> GetStandingsAsync(int? leagueId, int season)
+            => Task.FromResult(GetStandingsResult);
+
         public Task<StandingsResponse?> GetDivisionStandingsAsync(int divisionId, int season)
         {
             GetDivisionStandingsCalled = true;
@@ -1050,9 +1337,16 @@ public class MLBCommandManagerTests
             => Task.FromResult(CurrentStandingsResponseResult);
 
         public Task<string> GetRosterAsync(int teamId, int? season = null, string rosterType = "active")
-            => Task.FromResult(RosterJson);
+        {
+            if (RosterJsonByType != null && RosterJsonByType.TryGetValue(rosterType, out string? rosterJson))
+            {
+                return Task.FromResult(rosterJson);
+            }
 
-        public Task<TeamsResponse?> GetTeamsAsync(int sportId)
+            return Task.FromResult(RosterJson);
+        }
+
+        public Task<TeamsResponse?> GetTeamsAsync(int sportId, int? season = null)
         {
             GetTeamsCalled = true;
             return Task.FromResult(TeamsResponseResult);
@@ -1067,7 +1361,7 @@ public class MLBCommandManagerTests
             return Task.FromResult(SearchPeopleResult);
         }
 
-        public Task<PeopleResponse?> GetPersonAsync(int playerId)
+        public Task<PeopleResponse?> GetPersonAsync(int playerId, int? season = null)
         {
             GetPersonCalled = true;
 

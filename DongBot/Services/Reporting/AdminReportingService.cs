@@ -19,7 +19,7 @@ namespace DongBot
             _statisticsTracker = statisticsTracker;
         }
 
-        public string GetAuditLog(string command, string userId, string username, string channelName)
+        public string GetAuditLog(string command, string userId, string username, string channelName, ulong guildId = 0)
         {
             try
             {
@@ -33,10 +33,10 @@ namespace DongBot
                 if (parts.Length > 2)
                     category = parts[2].ToUpperInvariant();
 
-                List<AuditEntry> entries = _auditLogger.GetRecentEntries(count, category, null);
+                List<AuditEntry> entries = _auditLogger.GetRecentEntries(count, category, null, guildId);
 
                 if (entries.Count == 0)
-                    return "No audit log entries found.";
+                    return "No audit log entries found for this server.";
 
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine($"**Audit Log** (Last {entries.Count} entries)");
@@ -54,8 +54,9 @@ namespace DongBot
                 sb.AppendLine("```");
 
                 _auditLogger.Log(userId, username, "VIEW", "AUDIT", "LOG",
-                    $"Viewed {entries.Count} entries" + (category != null ? $" (Category: {category})" : string.Empty));
-                _statisticsTracker.TrackCommand("AUDIT", "AUDIT", userId, username, channelName, true);
+                    $"Viewed {entries.Count} entries" + (category != null ? $" (Category: {category})" : string.Empty), 
+                    channelName, guildId);
+                _statisticsTracker.TrackCommand("AUDIT", "AUDIT", userId, username, channelName, true, guildId);
 
                 return sb.ToString();
             }
@@ -65,14 +66,14 @@ namespace DongBot
             }
         }
 
-        public string GetAuditStats(string userId, string username, string channelName)
+        public string GetAuditStats(string userId, string username, string channelName, ulong guildId = 0)
         {
             try
             {
-                AuditStatistics stats = _auditLogger.GetStatistics();
+                AuditStatistics stats = _auditLogger.GetStatistics(guildId);
 
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine("**Audit Log Statistics**");
+                sb.AppendLine("**Audit Log Statistics** (This Server)");
                 sb.AppendLine("```");
                 sb.AppendLine($"Total Entries: {stats.TotalEntries}");
                 sb.AppendLine($"Unique Users: {stats.UniqueUsers}");
@@ -92,8 +93,9 @@ namespace DongBot
 
                 sb.AppendLine("```");
 
-                _auditLogger.Log(userId, username, "VIEW", "AUDIT", "STATS", "Viewed audit statistics");
-                _statisticsTracker.TrackCommand("AUDIT-STATS", "AUDIT", userId, username, channelName, true);
+                _auditLogger.Log(userId, username, "VIEW", "AUDIT", "STATS", "Viewed audit statistics", 
+                    channelName, guildId);
+                _statisticsTracker.TrackCommand("AUDIT-STATS", "AUDIT", userId, username, channelName, true, guildId);
 
                 return sb.ToString();
             }
@@ -103,14 +105,14 @@ namespace DongBot
             }
         }
 
-        public string GetStats(string userId, string username, string channelName)
+        public string GetStats(string userId, string username, string channelName, ulong guildId = 0)
         {
             try
             {
-                StatisticsSummary summary = _statisticsTracker.GetSummary();
+                StatisticsSummary summary = _statisticsTracker.GetSummary(guildId);
 
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine("**Bot Statistics Summary**");
+                sb.AppendLine("**Bot Statistics Summary** (This Server)");
                 sb.AppendLine("```");
                 sb.AppendLine($"Total Commands Executed: {summary.TotalCommands:N0}");
                 sb.AppendLine($"Unique Users: {summary.TotalUniqueUsers}");
@@ -133,7 +135,7 @@ namespace DongBot
                 }
 
                 sb.AppendLine("```");
-                _statisticsTracker.TrackCommand("STATS", "STATS", userId, username, channelName, true);
+                _statisticsTracker.TrackCommand("STATS", "STATS", userId, username, channelName, true, guildId);
                 return sb.ToString();
             }
             catch (Exception ex)
@@ -142,7 +144,7 @@ namespace DongBot
             }
         }
 
-        public string GetTopCommands(string command, string userId, string username, string channelName)
+        public string GetTopCommands(string command, string userId, string username, string channelName, ulong guildId = 0)
         {
             try
             {
@@ -156,13 +158,13 @@ namespace DongBot
                 if (parts.Length > 2)
                     category = parts[2].ToUpperInvariant();
 
-                List<CommandStats> topCommands = _statisticsTracker.GetTopCommands(count, category);
+                List<CommandStats> topCommands = _statisticsTracker.GetTopCommands(count, category, guildId);
 
                 if (topCommands.Count == 0)
-                    return "No command statistics found.";
+                    return "No command statistics found for this server.";
 
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine($"**Top {topCommands.Count} Commands**" + (category != null ? $" (Category: {category})" : string.Empty));
+                sb.AppendLine($"**Top {topCommands.Count} Commands** (This Server)" + (category != null ? $" (Category: {category})" : string.Empty));
                 sb.AppendLine("```");
 
                 int rank = 1;
@@ -179,7 +181,7 @@ namespace DongBot
                 }
 
                 sb.AppendLine("```");
-                _statisticsTracker.TrackCommand("STATS-TOP", "STATS", userId, username, channelName, true);
+                _statisticsTracker.TrackCommand("STATS-TOP", "STATS", userId, username, channelName, true, guildId);
                 return sb.ToString();
             }
             catch (Exception ex)
@@ -188,7 +190,7 @@ namespace DongBot
             }
         }
 
-        public string GetUserStatistics(string command, string userId, string username, string channelName)
+        public string GetUserStatistics(string command, string userId, string username, string channelName, ulong guildId = 0)
         {
             try
             {
@@ -200,12 +202,23 @@ namespace DongBot
                     return "No statistics found for this user.";
 
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine($"**User Statistics: {userStats.Username}**");
+                sb.AppendLine($"**User Statistics: {userStats.Username}** (Global - partitioned by server)");
                 sb.AppendLine("```");
                 sb.AppendLine($"Total Commands: {userStats.TotalCommands:N0}");
                 sb.AppendLine($"First Seen: {userStats.FirstSeen:MM/dd/yyyy HH:mm}");
                 sb.AppendLine($"Last Seen: {userStats.LastSeen:MM/dd/yyyy HH:mm}");
                 sb.AppendLine();
+                
+                if (userStats.GuildCommandCounts.Any())
+                {
+                    sb.AppendLine("Commands by Server:");
+                    foreach (var kvp in userStats.GuildCommandCounts.OrderByDescending(x => x.Value))
+                    {
+                        sb.AppendLine($"  Guild {kvp.Key}: {kvp.Value:N0} commands");
+                    }
+                    sb.AppendLine();
+                }
+
                 sb.AppendLine("Top Commands:");
 
                 int rank = 1;
@@ -216,7 +229,7 @@ namespace DongBot
                 }
 
                 sb.AppendLine("```");
-                _statisticsTracker.TrackCommand("STATS-USER", "STATS", userId, username, channelName, true);
+                _statisticsTracker.TrackCommand("STATS-USER", "STATS", userId, username, channelName, true, guildId);
                 return sb.ToString();
             }
             catch (Exception ex)
@@ -225,7 +238,7 @@ namespace DongBot
             }
         }
 
-        public string GetCommandStatistics(string command, string userId, string username, string channelName)
+        public string GetCommandStatistics(string command, string userId, string username, string channelName, ulong guildId = 0)
         {
             try
             {
@@ -241,7 +254,7 @@ namespace DongBot
                     return $"No statistics found for command: {commandName}";
 
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine($"**Command Statistics: {cmdStats.CommandName}**");
+                sb.AppendLine($"**Command Statistics: {cmdStats.CommandName}** (Global - partitioned by server)");
                 sb.AppendLine("```");
                 sb.AppendLine($"Category: {cmdStats.Category}");
                 sb.AppendLine($"Total Executions: {cmdStats.TotalExecutions:N0}");
@@ -250,6 +263,17 @@ namespace DongBot
                 sb.AppendLine($"First Used: {cmdStats.FirstUsed:MM/dd/yyyy HH:mm}");
                 sb.AppendLine($"Last Used: {cmdStats.LastUsed:MM/dd/yyyy HH:mm}");
                 sb.AppendLine();
+
+                if (cmdStats.GuildExecutions.Any())
+                {
+                    sb.AppendLine("Executions by Server:");
+                    foreach (var kvp in cmdStats.GuildExecutions.OrderByDescending(x => x.Value))
+                    {
+                        double pct = (double)kvp.Value / cmdStats.TotalExecutions * 100;
+                        sb.AppendLine($"  Guild {kvp.Key}: {kvp.Value:N0} ({pct:F1}%)");
+                    }
+                    sb.AppendLine();
+                }
 
                 sb.AppendLine("Top Users:");
                 int rank = 1;
@@ -288,7 +312,7 @@ namespace DongBot
                 }
 
                 sb.AppendLine("```");
-                _statisticsTracker.TrackCommand("STATS-COMMAND", "STATS", userId, username, channelName, true);
+                _statisticsTracker.TrackCommand("STATS-COMMAND", "STATS", userId, username, channelName, true, guildId);
                 return sb.ToString();
             }
             catch (Exception ex)

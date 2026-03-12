@@ -2,6 +2,48 @@
 
 Detailed, developer-oriented release history.
 
+## 2.0.1 - 2026-03-12
+
+### MLB Command Corrections
+- `MLBCommandManager` player-stat rendering now keys off player role instead of shallow batting-stat presence.
+- Added explicit handling for:
+  - pitchers -> pitching + fielding only
+  - position players -> batting + baserunning + fielding only
+  - Shohei Ohtani -> all four stat sections
+- Added roster-driven player health/status enrichment to `!mlb-player` output.
+
+### Off-Season / Historical MLB Fallbacks
+- Expanded `IMLBDataClient` to expose:
+  - `GetStandingsAsync(int? leagueId, int season)`
+  - seasonal `GetTeamsAsync`
+  - seasonal `GetPersonAsync`
+- `MLBDataClient` now forwards those season-aware calls to MLBStatsAPI SDK methods.
+- `MLBCommandManager` now attempts historical-season fallback for:
+  - general standings
+  - Braves standings
+  - team division enrichment
+  - player current-team enrichment
+- Kept graceful handling for sparse MLB off-season responses where historical data is still incomplete.
+
+### Release Notes Workflow and Ordering
+- `MainDong.TryExtractReleaseNotesSections` now resolves “latest” by highest semantic version instead of first file section.
+- Range extraction now returns matched sections in descending semantic version order.
+- Admin help text updated from `!release-notes [version]` to `!release-notes [version|range]`.
+- `scripts/bump-version.ps1` now prepends starter sections to all maintained release artifacts:
+  - internal changelog
+  - user release notes
+  - admin release notes
+  - Discord release notes
+
+### Testing and Validation
+- Added release-note ordering tests covering misordered markdown input.
+- Expanded live MLB API coverage around SDK-backed command flows with throttling.
+- Latest validated suite state:
+  - 198 unit/integration tests passing locally
+  - 20 gated live MLB API tests passing
+
+---
+
 ## 2.0.0 - 2026-03-11
 
 ### Release Scope Summary (local vs `origin/main`)
