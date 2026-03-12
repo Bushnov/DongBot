@@ -62,6 +62,14 @@ jobs:
           echo "Changed files:"
           echo "${CHANGED_FILES}"
 
+          # Skip version bump check for docs/workflow-only changes.
+          # Only enforce a bump when code files (DongBot/, DongBot.Tests/, scripts/) changed.
+          CODE_CHANGED=$(echo "${CHANGED_FILES}" | grep -E '^(DongBot/|DongBot\.Tests/|scripts/)' || true)
+          if [[ -z "${CODE_CHANGED}" ]]; then
+            echo "No code files changed (docs/workflow-only diff); skipping version bump check."
+            exit 0
+          fi
+
           PROJECT_FILE_CHANGED=$(git diff --name-only ${DIFF_RANGE} -- "${PROJECT_FILE}")
           if [[ -z "${PROJECT_FILE_CHANGED}" ]]; then
             echo "Version bump required: ${PROJECT_FILE} was not changed."

@@ -28,7 +28,7 @@ namespace DongBot
                 string? category = null;
 
                 if (parts.Length > 1 && int.TryParse(parts[1], out int parsedCount))
-                    count = Math.Min(parsedCount, 50);
+                    count = Math.Clamp(parsedCount, 1, 50);
 
                 if (parts.Length > 2)
                     category = parts[2].ToUpperInvariant();
@@ -151,7 +151,7 @@ namespace DongBot
                 string? category = null;
 
                 if (parts.Length > 1 && int.TryParse(parts[1], out int parsedCount))
-                    count = Math.Min(parsedCount, 25);
+                    count = Math.Clamp(parsedCount, 1, 25);
 
                 if (parts.Length > 2)
                     category = parts[2].ToUpperInvariant();

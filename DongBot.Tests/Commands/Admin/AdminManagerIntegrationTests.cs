@@ -8,8 +8,8 @@ public class AdminManagerIntegrationTests
     public async Task AdminCommandManager_ReturnsStatsSummary_ForAdminChannel()
     {
         using TestWorkspace workspace = new();
-        AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
-        StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
+        using AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
+        using StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
         tracker.TrackCommand("DONG", "GIF", "u1", "tester", "baseball", true);
         AdminReportingService reportingService = new(auditLogger, tracker);
         AdminCommandManager manager = new(reportingService, "dongbot-admin");
@@ -25,8 +25,8 @@ public class AdminManagerIntegrationTests
     public async Task AdminCommandManager_ReturnsAuditEntries_ForAdminChannel()
     {
         using TestWorkspace workspace = new();
-        AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
-        StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
+        using AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
+        using StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
         auditLogger.Log("u1", "tester", "ADD", "GIF_COMMAND", "DONG", "Created command", "dongbot-admin", true);
         AdminReportingService reportingService = new(auditLogger, tracker);
         AdminCommandManager manager = new(reportingService, "dongbot-admin");
@@ -42,8 +42,8 @@ public class AdminManagerIntegrationTests
     public async Task AdminCommandManager_RejectsNonAdminUsage()
     {
         using TestWorkspace workspace = new();
-        AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
-        StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
+        using AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
+        using StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
         AdminReportingService reportingService = new(auditLogger, tracker);
         AdminCommandManager manager = new(reportingService, "dongbot-admin");
         CommandContext context = new("baseball", 1UL, false, "u1", "tester");

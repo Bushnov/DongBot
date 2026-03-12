@@ -9,7 +9,7 @@ public class GifManagerIntegrationTests
     {
         using TestWorkspace workspace = new();
         GifCommandService service = new(workspace.GetPath("gifcommands.json"));
-        StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
+        using StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
         service.AddOrUpdateCommand("DONG", "https://giphy.com/test.gif", aliases: "DINGER");
         GifCommandManager manager = new(service, statisticsTracker: tracker);
         CommandContext context = new("baseball", 123UL, false, "u1", "tester");
@@ -41,8 +41,8 @@ public class GifManagerIntegrationTests
     {
         using TestWorkspace workspace = new();
         GifCommandService service = new(workspace.GetPath("gifcommands.json"));
-        AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
-        StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
+        using AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
+        using StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
         GifAdminCommandManager manager = new(service, auditLogger, tracker, "dongbot-admin");
         CommandContext context = new("dongbot-admin", 1UL, true, "u1", "tester");
 
@@ -58,8 +58,8 @@ public class GifManagerIntegrationTests
     {
         using TestWorkspace workspace = new();
         GifCommandService service = new(workspace.GetPath("gifcommands.json"));
-        AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
-        StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
+        using AuditLogger auditLogger = new(workspace.GetPath("audit.json"));
+        using StatisticsTracker tracker = new(workspace.GetPath("stats.json"));
         GifAdminCommandManager manager = new(service, auditLogger, tracker, "dongbot-admin");
         CommandContext context = new("baseball", 1UL, false, "u1", "tester");
 
