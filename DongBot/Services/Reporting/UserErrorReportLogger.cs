@@ -64,7 +64,7 @@ namespace DongBot
 
         public void Dispose()
         {
-            // Writes are immediate, so no buffered flush is required.
+            _backupManager?.Dispose();
         }
 
         private void Load()

@@ -125,7 +125,7 @@ Script behavior:
 !audit-stats
 !stats
 !stats-top [N]
-!stats-user [USERNAME]
+!stats-user [USER_ID]
 !stats-command COMMAND
 ```
 

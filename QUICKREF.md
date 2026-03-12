@@ -46,7 +46,7 @@ These commands are restricted to the configured admin channel (`AdminChannelName
 - `!release-notes [version|range]`
 - `!stats`
 - `!stats-top [N]`
-- `!stats-user [USERNAME]`
+- `!stats-user [USER_ID]`
 - `!stats-command COMMAND`
 
 ### Scheduler Control

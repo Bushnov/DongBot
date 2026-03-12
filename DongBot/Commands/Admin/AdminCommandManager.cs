@@ -94,7 +94,7 @@ namespace DongBot
             sb.AppendLine("!release-notes [version] - Post user release notes to #dongdot");
             sb.AppendLine("!stats - Show overall bot statistics");
             sb.AppendLine("!stats-top [N] - Show top N commands");
-            sb.AppendLine("!stats-user [USERNAME] - Show user statistics");
+            sb.AppendLine("!stats-user [USER_ID] - Show user statistics");
             sb.AppendLine("!stats-command COMMANDNAME - Show command statistics");
             sb.AppendLine("```");
             return sb.ToString();

@@ -628,7 +628,9 @@ namespace DongBot
         /// </summary>
         private static bool IsErrorResponse(string response)
             => response.StartsWith("Error:", StringComparison.OrdinalIgnoreCase)
-            || response.StartsWith("\u274c"); // ❌
+            || response.StartsWith("❌")
+            || response.StartsWith("Usage:", StringComparison.OrdinalIgnoreCase)
+            || response.Contains("Invalid", StringComparison.OrdinalIgnoreCase); // ❌
 
         internal void SetCommandManagersForTesting(IEnumerable<ICommandManager> managers)
         {
