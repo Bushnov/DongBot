@@ -1,0 +1,101 @@
+name: Version bump required
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  require-version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Enforce version bump
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PROJECT_FILE="DongBot/DongBot.csproj"
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            BASE_REF="origin/${{ github.base_ref }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            DIFF_RANGE="${BASE_REF}...${HEAD_SHA}"
+            BEFORE_FILE_REF="${BASE_REF}:${PROJECT_FILE}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+
+            if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
+              if git rev-parse "${HEAD_SHA}^" >/dev/null 2>&1; then
+                BASE_SHA=$(git rev-parse "${HEAD_SHA}^")
+              else
+                echo "No valid base commit available for first push; skipping version bump check."
+                exit 0
+              fi
+            fi
+
+            DIFF_RANGE="${BASE_SHA}..${HEAD_SHA}"
+            BEFORE_FILE_REF="${BASE_SHA}:${PROJECT_FILE}"
+          else
+            echo "Unsupported event: ${GITHUB_EVENT_NAME}"
+            exit 1
+          fi
+
+          if [[ -z "${HEAD_SHA}" ]]; then
+            echo "Could not determine head SHA."
+            exit 1
+          fi
+
+          CHANGED_FILES=$(git diff --name-only ${DIFF_RANGE})
+          if [[ -z "${CHANGED_FILES}" ]]; then
+            echo "No changed files detected."
+            exit 0
+          fi
+
+          echo "Changed files:"
+          echo "${CHANGED_FILES}"
+
+          # Skip version bump check for docs/workflow-only changes.
+          # Only enforce a bump when code files (DongBot/, DongBot.Tests/, scripts/) changed.
+          CODE_CHANGED=$(echo "${CHANGED_FILES}" | grep -E '^(DongBot/|DongBot\.Tests/|scripts/)' || true)
+          if [[ -z "${CODE_CHANGED}" ]]; then
+            echo "No code files changed (docs/workflow-only diff); skipping version bump check."
+            exit 0
+          fi
+
+          PROJECT_FILE_CHANGED=$(git diff --name-only ${DIFF_RANGE} -- "${PROJECT_FILE}")
+          if [[ -z "${PROJECT_FILE_CHANGED}" ]]; then
+            echo "Version bump required: ${PROJECT_FILE} was not changed."
+            exit 1
+          fi
+
+          BEFORE_VERSION=$(git show "${BEFORE_FILE_REF}" | sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' | head -n 1)
+          AFTER_VERSION=$(git show "${HEAD_SHA}:${PROJECT_FILE}" | sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' | head -n 1)
+
+          if [[ -z "${AFTER_VERSION}" ]]; then
+            echo "Could not parse <Version> from ${PROJECT_FILE} at HEAD."
+            exit 1
+          fi
+
+          if [[ -z "${BEFORE_VERSION}" ]]; then
+            echo "No <Version> found in base ref; treating this as initial version introduction."
+            echo "Version after: ${AFTER_VERSION}"
+            exit 0
+          fi
+
+          echo "Version before: ${BEFORE_VERSION}"
+          echo "Version after:  ${AFTER_VERSION}"
+
+          if [[ "${BEFORE_VERSION}" == "${AFTER_VERSION}" ]]; then
+            echo "Version bump required: <Version> did not change."
+            exit 1
+          fi
+
+          echo "Version bump check passed."

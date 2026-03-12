@@ -16,6 +16,8 @@ gifcommands.backup.*.json
 # Build outputs
 bin/
 obj/
+TestResults/
+coverage.cobertura.xml
 *.dll
 *.exe
 *.pdb

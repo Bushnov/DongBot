@@ -1,0 +1,39 @@
+name: Build and test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Configure GitHub Packages source
+        run: |
+          dotnet nuget remove source github-bushnov || true
+          dotnet nuget add source "https://nuget.pkg.github.com/Bushnov/index.json" \
+            --name github-bushnov \
+            --username "Bushnov" \
+            --password "$GH_PACKAGES_PAT" \
+            --store-password-in-clear-text
+        env:
+          GH_PACKAGES_PAT: ${{ secrets.GH_PACKAGES_PAT }}
+
+      - name: Restore
+        run: dotnet restore DongBot.sln
+
+      - name: Build
+        run: dotnet build DongBot.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test DongBot.Tests/DongBot.Tests.csproj --configuration Release --no-build

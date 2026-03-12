@@ -32,6 +32,16 @@ namespace DongBot
             "media.discordapp.net"
         };
 
+        private static readonly HttpClient SharedHttpClient = CreateHttpClient();
+
+        private static HttpClient CreateHttpClient()
+        {
+            HttpClient client = new HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(5);
+            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            return client;
+        }
+
         /// <summary>
         /// Basic URL format validation
         /// </summary>
@@ -39,7 +49,7 @@ namespace DongBot
         {
             return  string.IsNullOrWhiteSpace(url) 
                 ?  false 
-                :  Uri.TryCreate(url, UriKind.Absolute, out Uri result)
+                :  Uri.TryCreate(url, UriKind.Absolute, out Uri? result)
                 && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
         }
 
@@ -48,7 +58,7 @@ namespace DongBot
         /// </summary>
         public static bool IsValidGifDomain(string url)
         {
-            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
+            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri == null)
             {
                 return false;
             }
@@ -64,15 +74,9 @@ namespace DongBot
         {
             try
             {
-                using (HttpClient client = new HttpClient())
+                using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Head, url))
+                using (HttpResponseMessage response = await SharedHttpClient.SendAsync(request))
                 {
-                    client.Timeout = TimeSpan.FromSeconds(5);
-                    HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Head, url);
-                    
-                    // Add user agent to avoid being blocked
-                    request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-                    
-                    HttpResponseMessage response = await client.SendAsync(request);
                     return response.IsSuccessStatusCode;
                 }
             }
@@ -176,9 +180,9 @@ namespace DongBot
     /// </summary>
     public class UrlValidationResult
     {
-        public string Url { get; set; }
+        public string Url { get; set; } = string.Empty;
         public bool IsValid { get; set; }
-        public string ErrorMessage { get; set; }
+        public string? ErrorMessage { get; set; }
         public bool WarningOnly { get; set; }
     }
 }

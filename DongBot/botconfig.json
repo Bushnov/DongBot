@@ -1,0 +1,10 @@
+{
+  "adminChannelName": "dongbot-admin",
+  "bravesChannelName": "baseball",
+  "tokenFilePath": "token.txt",
+  "gifCommandsFilePath": "gifcommands.json",
+  "auditLogFilePath": "bot_audit.json",
+  "statisticsFilePath": "bot_statistics.json",
+  "userErrorReportsFilePath": "user_error_reports.json",
+  "auditVerboseConsoleLogging": false
+}

@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DongBot
 {
@@ -16,9 +14,9 @@ namespace DongBot
     {
         private readonly string _backupDirectory;
         private readonly int _maxBackupsToKeep;
-        private readonly bool _enableTimedBackups;
-        private Timer? _backupTimer;
+        private readonly TimeSpan _minSaveBackupInterval;
         private readonly object _backupLock = new object();
+        private readonly Dictionary<string, DateTime> _lastSaveBackupByFile = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         private bool _disposed;
 
         public void Dispose()
@@ -37,11 +35,6 @@ namespace DongBot
             if (disposing)
             {
                 // Dispose managed resources
-                if (_backupTimer != null)
-                {
-                    _backupTimer.Dispose();
-                    _backupTimer = null;
-                }
             }
 
             _disposed = true;
@@ -51,23 +44,20 @@ namespace DongBot
         /// </summary>
         /// <param name="backupDirectory">Directory where backups will be stored</param>
         /// <param name="maxBackupsToKeep">Maximum number of backups to retain per file (default: 10)</param>
-        /// <param name="enableTimedBackups">Enable automatic timed backups (default: false)</param>
-        public BackupManager(string backupDirectory, int maxBackupsToKeep = 10, bool enableTimedBackups = false)
+        /// <param name="minSaveBackupInterval">Minimum interval between save-triggered backups for the same file (default: 30 minutes)</param>
+        public BackupManager(
+            string backupDirectory,
+            int maxBackupsToKeep = 10,
+            TimeSpan? minSaveBackupInterval = null)
         {
             _backupDirectory = backupDirectory;
             _maxBackupsToKeep = maxBackupsToKeep;
-            _enableTimedBackups = enableTimedBackups;
+            _minSaveBackupInterval = minSaveBackupInterval ?? TimeSpan.FromMinutes(30);
 
             // Create backup directory if it doesn't exist
             if (!Directory.Exists(_backupDirectory))
             {
                 Directory.CreateDirectory(_backupDirectory);
-            }
-
-            // Initialize timed backup framework (disabled by default)
-            if (_enableTimedBackups)
-            {
-                InitializeTimedBackups();
             }
         }
 
@@ -89,6 +79,21 @@ namespace DongBot
                         return null;
                     }
 
+                    // Rate-limit high-frequency save backups per file
+                    if (reason.Equals("save", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string normalizedPath = Path.GetFullPath(sourceFilePath);
+                        DateTime now = DateTime.UtcNow;
+                        if (_lastSaveBackupByFile.TryGetValue(normalizedPath, out DateTime lastBackupTime))
+                        {
+                            TimeSpan elapsed = now - lastBackupTime;
+                            if (elapsed < _minSaveBackupInterval)
+                            {
+                                return null;
+                            }
+                        }
+                    }
+
                     // Generate backup filename with timestamp
                     string fileName = Path.GetFileNameWithoutExtension(sourceFilePath);
                     string extension = Path.GetExtension(sourceFilePath);
@@ -101,6 +106,12 @@ namespace DongBot
 
                     // Clean up old backups
                     CleanupOldBackups(fileName, extension);
+
+                    if (reason.Equals("save", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string normalizedPath = Path.GetFullPath(sourceFilePath);
+                        _lastSaveBackupByFile[normalizedPath] = DateTime.UtcNow;
+                    }
 
                     return backupFilePath;
                 }
@@ -228,44 +239,6 @@ namespace DongBot
                     return false;
                 }
             }
-        }
-
-        /// <summary>
-        /// Initializes the timed backup system (framework for future use)
-        /// </summary>
-        private void InitializeTimedBackups()
-        {
-            // Framework for timed backups - can be enabled in the future
-            // Default: backup every 6 hours
-            TimeSpan backupInterval = TimeSpan.FromHours(6);
-            
-            _backupTimer = new Timer(
-                callback: TimedBackupCallback,
-                state: null,
-                dueTime: backupInterval,
-                period: backupInterval
-            );
-        }
-
-        /// <summary>
-        /// Callback for timed backups (framework for future use)
-        /// </summary>
-        private void TimedBackupCallback(object? state)
-        {
-            // This method would be called periodically when timed backups are enabled
-            // Implementation would backup all tracked files
-            // For now, this is just a framework placeholder
-            Console.WriteLine("[BackupManager] Timed backup triggered (framework - not implemented)");
-        }
-
-        /// <summary>
-        /// Registers a file for automatic timed backups (framework for future use)
-        /// </summary>
-        /// <param name="filePath">Path to the file to backup automatically</param>
-        public void RegisterFileForTimedBackups(string filePath)
-        {
-            // Framework for future use - would track files to backup automatically
-            // Not implemented as timed backups are disabled
         }
 
     }
