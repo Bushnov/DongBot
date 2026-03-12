@@ -25,7 +25,7 @@ namespace DongBot
             Load();
         }
 
-        public void LogReport(string userId, string username, string channelName, string? previousCommand, string? comment)
+        public void LogReport(string userId, string username, string channelName, string? previousCommand, string? comment, ulong guildId = 0, string? guildName = null, ulong channelId = 0)
         {
             lock (_lock)
             {
@@ -35,6 +35,9 @@ namespace DongBot
                     UserId = userId,
                     Username = username,
                     ChannelName = channelName,
+                    ChannelId = channelId,
+                    GuildId = guildId,
+                    GuildName = guildName,
                     PreviousCommand = previousCommand,
                     Comment = comment
                 };
@@ -51,14 +54,17 @@ namespace DongBot
             }
         }
 
-        public List<UserErrorReportEntry> GetRecentReports(int count = 100)
+        public List<UserErrorReportEntry> GetRecentReports(int count = 100, ulong? guildId = null)
         {
             lock (_lock)
             {
-                return _log.Entries
-                    .OrderByDescending(e => e.Timestamp)
-                    .Take(count)
-                    .ToList();
+                IEnumerable<UserErrorReportEntry> entries = _log.Entries
+                    .OrderByDescending(e => e.Timestamp);
+
+                if (guildId.HasValue && guildId.Value != 0)
+                    entries = entries.Where(e => e.GuildId == guildId.Value);
+
+                return entries.Take(count).ToList();
             }
         }
 
@@ -134,6 +140,9 @@ namespace DongBot
         public string UserId { get; set; } = string.Empty;
         public string Username { get; set; } = string.Empty;
         public string ChannelName { get; set; } = string.Empty;
+        public ulong ChannelId { get; set; }
+        public ulong GuildId { get; set; }
+        public string? GuildName { get; set; }
         public string? PreviousCommand { get; set; }
         public string? Comment { get; set; }
     }

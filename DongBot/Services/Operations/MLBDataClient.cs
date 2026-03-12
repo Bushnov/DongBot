@@ -14,6 +14,9 @@ namespace DongBot
         public Task<ScheduleResponse?> GetTodaysScheduleAsync(int sportId, int? teamId = null)
             => _mlbClient.Schedule.GetTodaysScheduleAsync(sportId: sportId, teamId: teamId);
 
+        public Task<StandingsResponse?> GetStandingsAsync(int? leagueId, int season)
+            => _mlbClient.Standings.GetStandingsAsync(leagueId: leagueId, season: season);
+
         public Task<StandingsResponse?> GetDivisionStandingsAsync(int divisionId, int season)
             => _mlbClient.Standings.GetDivisionStandingsAsync(divisionId, season);
 
@@ -23,8 +26,8 @@ namespace DongBot
         public Task<string> GetRosterAsync(int teamId, int? season = null, string rosterType = "active")
             => _mlbClient.Teams.GetRosterAsync(teamId: teamId, season: season, rosterType: rosterType);
 
-        public Task<TeamsResponse?> GetTeamsAsync(int sportId)
-            => _mlbClient.Teams.GetTeamsAsync(sportId: sportId);
+        public Task<TeamsResponse?> GetTeamsAsync(int sportId, int? season = null)
+            => _mlbClient.Teams.GetTeamsAsync(sportId: sportId, season: season);
 
         public Task<GameResponse?> GetGameAsync(int gamePk)
             => _mlbClient.Games.GetGameAsync(gamePk);
@@ -32,8 +35,8 @@ namespace DongBot
         public Task<string> SearchPeopleAsync(string playerName, int sportId)
             => _mlbClient.People.SearchPeopleAsync(playerName, sportId);
 
-        public Task<PeopleResponse?> GetPersonAsync(int playerId)
-            => _mlbClient.People.GetPersonAsync(playerId);
+        public Task<PeopleResponse?> GetPersonAsync(int playerId, int? season = null)
+            => _mlbClient.People.GetPersonAsync(playerId, season);
 
         public Task<StatsResponse?> GetPlayerStatsAsync(int playerId, int season)
             => _mlbClient.People.GetPlayerStatsAsync(playerId, season: season);

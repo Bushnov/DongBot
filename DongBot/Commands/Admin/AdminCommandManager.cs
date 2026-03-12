@@ -42,37 +42,37 @@ namespace DongBot
 
             if (upper.StartsWith("AUDIT") && !upper.StartsWith("AUDIT-STATS"))
             {
-                return Task.FromResult(_reportingService.GetAuditLog(command, context.UserId, context.Username, context.ChannelName));
+                return Task.FromResult(_reportingService.GetAuditLog(command, context.UserId, context.Username, context.ChannelName, context.GuildId));
             }
 
             if (upper.StartsWith("BADBOT-LIST"))
             {
-                return Task.FromResult(GetBadBotReports(command));
+                return Task.FromResult(GetBadBotReports(command, context.GuildId));
             }
 
             if (upper.Equals("AUDIT-STATS"))
             {
-                return Task.FromResult(_reportingService.GetAuditStats(context.UserId, context.Username, context.ChannelName));
+                return Task.FromResult(_reportingService.GetAuditStats(context.UserId, context.Username, context.ChannelName, context.GuildId));
             }
 
             if (upper.Equals("STATS"))
             {
-                return Task.FromResult(_reportingService.GetStats(context.UserId, context.Username, context.ChannelName));
+                return Task.FromResult(_reportingService.GetStats(context.UserId, context.Username, context.ChannelName, context.GuildId));
             }
 
             if (upper.StartsWith("STATS-TOP"))
             {
-                return Task.FromResult(_reportingService.GetTopCommands(command, context.UserId, context.Username, context.ChannelName));
+                return Task.FromResult(_reportingService.GetTopCommands(command, context.UserId, context.Username, context.ChannelName, context.GuildId));
             }
 
             if (upper.StartsWith("STATS-USER"))
             {
-                return Task.FromResult(_reportingService.GetUserStatistics(command, context.UserId, context.Username, context.ChannelName));
+                return Task.FromResult(_reportingService.GetUserStatistics(command, context.UserId, context.Username, context.ChannelName, context.GuildId));
             }
 
             if (upper.StartsWith("STATS-COMMAND"))
             {
-                return Task.FromResult(_reportingService.GetCommandStatistics(command, context.UserId, context.Username, context.ChannelName));
+                return Task.FromResult(_reportingService.GetCommandStatistics(command, context.UserId, context.Username, context.ChannelName, context.GuildId));
             }
 
             return Task.FromResult(string.Empty);
@@ -91,7 +91,7 @@ namespace DongBot
             sb.AppendLine("!audit [limit] - Show recent audit log entries");
             sb.AppendLine("!audit-stats - Show audit statistics");
             sb.AppendLine("!badbot-list [N] - Show recent user error reports");
-            sb.AppendLine("!release-notes [version] - Post user release notes to #dongdot");
+            sb.AppendLine("!release-notes [version|range] - Post user release notes to #dongdot");
             sb.AppendLine("!stats - Show overall bot statistics");
             sb.AppendLine("!stats-top [N] - Show top N commands");
             sb.AppendLine("!stats-user [USER_ID] - Show user statistics");
@@ -100,7 +100,7 @@ namespace DongBot
             return sb.ToString();
         }
 
-        private string GetBadBotReports(string command)
+        private string GetBadBotReports(string command, ulong guildId)
         {
             if (_userErrorReportLogger == null)
             {
@@ -114,10 +114,10 @@ namespace DongBot
                 count = Math.Clamp(parsed, 1, 100);
             }
 
-            var reports = _userErrorReportLogger.GetRecentReports(count);
+            var reports = _userErrorReportLogger.GetRecentReports(count, guildId);
             if (reports.Count == 0)
             {
-                return "No user error reports found.";
+                return "No user error reports found for this server.";
             }
 
             StringBuilder sb = new StringBuilder();

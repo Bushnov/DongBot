@@ -3,6 +3,7 @@
 using Discord;
 using Discord.WebSocket;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -16,15 +17,25 @@ namespace DongBot
 {
     public interface IBravesSchedulerControl
     {
-        void Enable();
-        void Disable();
-        string GetStatus();
-        Task<string> TriggerDailyPost();
-        Task<string> TriggerWeeklyPost();
+        /// <summary>Enable scheduler for a specific guild.</summary>
+        void Enable(ulong guildId);
+        
+        /// <summary>Disable scheduler for a specific guild.</summary>
+        void Disable(ulong guildId);
+        
+        /// <summary>Get scheduler status for a specific guild.</summary>
+        string GetStatus(ulong guildId);
+        
+        /// <summary>Manually trigger daily post for a specific guild (for testing).</summary>
+        Task<string> TriggerDailyPost(ulong guildId);
+        
+        /// <summary>Manually trigger weekly post for a specific guild (for testing).</summary>
+        Task<string> TriggerWeeklyPost(ulong guildId);
     }
 
     /// <summary>
-    /// Handles scheduled automated messages for Atlanta Braves updates
+    /// Handles scheduled automated messages for Atlanta Braves updates.
+    /// Supports multiple Discord guilds (servers) with independent enable/disable state per guild.
     /// </summary>
     public class BravesScheduler : IBravesSchedulerControl
     {
@@ -39,12 +50,12 @@ namespace DongBot
         private const int BRAVES_TEAM_ID = TeamIds.AtlantaBraves;
         private const int NL_EAST_DIVISION_ID = DivisionIds.NLEast;
         
-        // Track last checked date to avoid duplicate posts
-        private DateTime _lastDailyPost = DateTime.MinValue;
-        private DateTime _lastWeeklyPost = DateTime.MinValue;
-        private int _lastGamePreviewId = 0;
-        
-        private bool _isEnabled = true; // Can be toggled via admin command
+        // Track state per guild
+        private readonly Dictionary<ulong, DateTime> _lastDailyPost = new();
+        private readonly Dictionary<ulong, DateTime> _lastWeeklyPost = new();
+        private readonly Dictionary<ulong, int> _lastGamePreviewId = new();
+        private readonly Dictionary<ulong, bool> _guildEnabledState = new();
+        private const bool DEFAULT_ENABLED = true;
 
         public BravesScheduler(DiscordSocketClient client, string bravesChannelName = "baseball", IMLBDataClient? mlbClient = null)
         {
@@ -139,45 +150,71 @@ namespace DongBot
         }
 
         /// <summary>
-        /// Enable scheduled posts
+        /// Enable scheduler for a specific guild
         /// </summary>
-        public void Enable()
+        public void Enable(ulong guildId)
         {
-            _isEnabled = true;
-            Console.WriteLine("Braves Scheduler enabled.");
+            _guildEnabledState[guildId] = true;
+            Console.WriteLine($"Braves Scheduler enabled for guild {guildId}.");
         }
 
         /// <summary>
-        /// Disable scheduled posts
+        /// Disable scheduler for a specific guild
         /// </summary>
-        public void Disable()
+        public void Disable(ulong guildId)
         {
-            _isEnabled = false;
-            Console.WriteLine("Braves Scheduler disabled.");
+            _guildEnabledState[guildId] = false;
+            Console.WriteLine($"Braves Scheduler disabled for guild {guildId}.");
         }
 
         /// <summary>
-        /// Get scheduler status
+        /// Get scheduler status for a specific guild
         /// </summary>
-        public string GetStatus()
+        public string GetStatus(ulong guildId)
         {
+            bool isEnabled = IsEnabledForGuild(guildId);
             DateTime estNow = GetEasternTime();
-            return $"**Braves Scheduler Status:**\n" +
-                   $"Enabled: {(_isEnabled ? "✅ Yes" : "❌ No")}\n" +
+            DateTime lastDaily = GetLastDailyPost(guildId);
+            DateTime lastWeekly = GetLastWeeklyPost(guildId);
+
+            return $"**Braves Scheduler Status (Guild {guildId}):**\n" +
+                   $"Enabled: {(isEnabled ? "✅ Yes" : "❌ No")}\n" +
                    $"Current EST Time: {estNow:yyyy-MM-dd HH:mm:ss}\n" +
-                   $"Last Daily Post: {(_lastDailyPost == DateTime.MinValue ? "Never" : _lastDailyPost.ToString("yyyy-MM-dd"))}\n" +
-                   $"Last Weekly Post: {(_lastWeeklyPost == DateTime.MinValue ? "Never" : _lastWeeklyPost.ToString("yyyy-MM-dd"))}\n" +
-                     $"Target Channel: #{_bravesChannelName}";
+                   $"Last Daily Post: {(lastDaily == DateTime.MinValue ? "Never" : lastDaily.ToString("yyyy-MM-dd"))}\n" +
+                   $"Last Weekly Post: {(lastWeekly == DateTime.MinValue ? "Never" : lastWeekly.ToString("yyyy-MM-dd"))}\n" +
+                   $"Target Channel: #{_bravesChannelName}";
+        }
+
+        private bool IsEnabledForGuild(ulong guildId)
+        {
+            if (!_guildEnabledState.ContainsKey(guildId))
+                _guildEnabledState[guildId] = DEFAULT_ENABLED;
+            return _guildEnabledState[guildId];
+        }
+
+        private DateTime GetLastDailyPost(ulong guildId)
+        {
+            return _lastDailyPost.ContainsKey(guildId) ? _lastDailyPost[guildId] : DateTime.MinValue;
+        }
+
+        private DateTime GetLastWeeklyPost(ulong guildId)
+        {
+            return _lastWeeklyPost.ContainsKey(guildId) ? _lastWeeklyPost[guildId] : DateTime.MinValue;
+        }
+
+        private int GetLastGamePreviewId(ulong guildId)
+        {
+            return _lastGamePreviewId.ContainsKey(guildId) ? _lastGamePreviewId[guildId] : 0;
         }
 
         /// <summary>
-        /// Manually trigger daily schedule post (for testing)
+        /// Manually trigger daily schedule post for a specific guild (for testing)
         /// </summary>
-        public async Task<string> TriggerDailyPost()
+        public async Task<string> TriggerDailyPost(ulong guildId)
         {
             try
             {
-                await PostDailySchedule();
+                await PostDailySchedule(guildId);
                 return "✅ Daily schedule post triggered successfully.";
             }
             catch (Exception ex)
@@ -187,13 +224,13 @@ namespace DongBot
         }
 
         /// <summary>
-        /// Manually trigger weekly standings post (for testing)
+        /// Manually trigger weekly standings post for a specific guild (for testing)
         /// </summary>
-        public async Task<string> TriggerWeeklyPost()
+        public async Task<string> TriggerWeeklyPost(ulong guildId)
         {
             try
             {
-                await PostWeeklyStandings();
+                await PostWeeklyStandings(guildId);
                 return "✅ Weekly standings post triggered successfully.";
             }
             catch (Exception ex)
@@ -205,21 +242,25 @@ namespace DongBot
         #region Scheduled Tasks
 
         /// <summary>
-        /// Check if it's time for the daily 10am EST post
+        /// Check if it's time for the daily 10am EST post and post to all enabled guilds
         /// </summary>
         private async Task CheckDailySchedule()
         {
             try
             {
-                if (!_isEnabled) return;
-                
                 DateTime estNow = GetEasternTime();
 
-                if (ShouldPostDailySchedule(estNow, _lastDailyPost))
+                foreach (SocketGuild guild in _client.Guilds)
                 {
-                    Console.WriteLine($"Triggering daily schedule post at {estNow}");
-                    _lastDailyPost = estNow.Date;
-                    await PostDailySchedule();
+                    if (!IsEnabledForGuild(guild.Id)) continue;
+
+                    DateTime lastDaily = GetLastDailyPost(guild.Id);
+                    if (ShouldPostDailySchedule(estNow, lastDaily))
+                    {
+                        Console.WriteLine($"Triggering daily schedule post at {estNow} for guild {guild.Name}");
+                        _lastDailyPost[guild.Id] = estNow.Date;
+                        await PostDailySchedule(guild.Id);
+                    }
                 }
             }
             catch (Exception ex)
@@ -229,14 +270,12 @@ namespace DongBot
         }
 
         /// <summary>
-        /// Check if there's a game starting in ~30 minutes
+        /// Check if there's a game starting in ~30 minutes and post to all enabled guilds
         /// </summary>
         private async Task CheckGamePreview()
         {
             try
             {
-                if (!_isEnabled) return;
-                
                 ScheduleResponse? schedule = await _mlbClient.GetTodaysScheduleAsync(
                     sportId: SportIds.MLB,
                     teamId: BRAVES_TEAM_ID);
@@ -247,11 +286,17 @@ namespace DongBot
                     {
                         foreach (MLBStatsAPI.Models.Game game in date.Games)
                         {
-                            if (ShouldPostGamePreview(game, _lastGamePreviewId, DateTime.UtcNow))
+                            foreach (SocketGuild guild in _client.Guilds)
                             {
-                                Console.WriteLine($"Triggering game preview for game {game.GamePk}");
-                                _lastGamePreviewId = game.GamePk;
-                                await PostGamePreview(game);
+                                if (!IsEnabledForGuild(guild.Id)) continue;
+
+                                int lastPreviewId = GetLastGamePreviewId(guild.Id);
+                                if (ShouldPostGamePreview(game, lastPreviewId, DateTime.UtcNow))
+                                {
+                                    Console.WriteLine($"Triggering game preview for game {game.GamePk} in guild {guild.Name}");
+                                    _lastGamePreviewId[guild.Id] = game.GamePk;
+                                    await PostGamePreview(game, guild.Id);
+                                }
                             }
                         }
                     }
@@ -264,21 +309,25 @@ namespace DongBot
         }
 
         /// <summary>
-        /// Check if it's Monday morning for weekly standings post
+        /// Check if it's Monday morning for weekly standings post and post to all enabled guilds
         /// </summary>
         private async Task CheckWeeklyStandings()
         {
             try
             {
-                if (!_isEnabled) return;
-                
                 DateTime estNow = GetEasternTime();
 
-                if (ShouldPostWeeklyStandings(estNow, _lastWeeklyPost))
+                foreach (SocketGuild guild in _client.Guilds)
                 {
-                    Console.WriteLine($"Triggering weekly standings post at {estNow}");
-                    _lastWeeklyPost = estNow.Date;
-                    await PostWeeklyStandings();
+                    if (!IsEnabledForGuild(guild.Id)) continue;
+
+                    DateTime lastWeekly = GetLastWeeklyPost(guild.Id);
+                    if (ShouldPostWeeklyStandings(estNow, lastWeekly))
+                    {
+                        Console.WriteLine($"Triggering weekly standings post at {estNow} for guild {guild.Name}");
+                        _lastWeeklyPost[guild.Id] = estNow.Date;
+                        await PostWeeklyStandings(guild.Id);
+                    }
                 }
             }
             catch (Exception ex)
@@ -576,13 +625,13 @@ namespace DongBot
         #region Message Generators
 
         /// <summary>
-        /// Post daily schedule at 10am EST
+        /// Post daily schedule to Braves channel in a specific guild
         /// </summary>
-        private async Task PostDailySchedule()
+        private async Task PostDailySchedule(ulong guildId)
         {
             try
             {
-                IMessageChannel? channel = await GetBravesChannel();
+                IMessageChannel? channel = await GetBravesChannelForGuild(guildId);
                 if (channel == null) return;
 
                 ScheduleResponse? schedule = await _mlbClient.GetTodaysScheduleAsync(
@@ -615,13 +664,13 @@ namespace DongBot
         }
 
         /// <summary>
-        /// Post detailed game preview 30 minutes before start
+        /// Post detailed game preview to Braves channel in a specific guild
         /// </summary>
-        private async Task PostGamePreview(MLBStatsAPI.Models.Game game)
+        private async Task PostGamePreview(MLBStatsAPI.Models.Game game, ulong guildId)
         {
             try
             {
-                IMessageChannel? channel = await GetBravesChannel();
+                IMessageChannel? channel = await GetBravesChannelForGuild(guildId);
                 if (channel == null) return;
 
                 string message = await BuildGamePreviewMessageAsync(game);
@@ -635,13 +684,13 @@ namespace DongBot
         }
 
         /// <summary>
-        /// Post weekly NL East standings on Monday morning
+        /// Post weekly NL East standings to Braves channel in a specific guild
         /// </summary>
-        private async Task PostWeeklyStandings()
+        private async Task PostWeeklyStandings(ulong guildId)
         {
             try
             {
-                IMessageChannel? channel = await GetBravesChannel();
+                IMessageChannel? channel = await GetBravesChannelForGuild(guildId);
                 if (channel == null) return;
 
                 int currentYear = DateTime.UtcNow.Year;
@@ -673,25 +722,29 @@ namespace DongBot
         }
 
         /// <summary>
-        /// Find and return the Braves channel
+        /// Find and return the Braves channel for a specific guild
         /// </summary>
-        private async Task<IMessageChannel?> GetBravesChannel()
+        private async Task<IMessageChannel?> GetBravesChannelForGuild(ulong guildId)
         {
             await Task.Delay(0); // Make async
             
-            foreach (SocketGuild guild in _client.Guilds)
+            SocketGuild? guild = _client.Guilds.FirstOrDefault(g => g.Id == guildId);
+            if (guild == null)
             {
-                IMessageChannel? channel = guild.TextChannels.FirstOrDefault(c => 
-                    c.Name.Equals(_bravesChannelName, StringComparison.OrdinalIgnoreCase));
-                
-                if (channel != null)
-                {
-                    Console.WriteLine($"Found Braves channel: {channel.Name} in guild: {guild.Name}");
-                    return channel;
-                }
+                Console.WriteLine($"Warning: Guild {guildId} not found");
+                return null;
+            }
+
+            IMessageChannel? channel = guild.TextChannels.FirstOrDefault(c => 
+                c.Name.Equals(_bravesChannelName, StringComparison.OrdinalIgnoreCase));
+            
+            if (channel != null)
+            {
+                Console.WriteLine($"Found Braves channel: {channel.Name} in guild: {guild.Name}");
+                return channel;
             }
             
-            Console.WriteLine($"Warning: Could not find channel named '{_bravesChannelName}'");
+            Console.WriteLine($"Warning: Could not find channel named '{_bravesChannelName}' in guild {guild.Name}");
             return null;
         }
 

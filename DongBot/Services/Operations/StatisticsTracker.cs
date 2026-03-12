@@ -163,10 +163,10 @@ namespace DongBot
         // Public API
 
         /// <summary>
-        /// Track a command execution. The update is held in memory and written to disk within 30 seconds.
+        /// Track a command execution on a specific guild. The update is held in memory and written to disk within 30 seconds.
         /// </summary>
         public void TrackCommand(string commandName, string category, string userId,
-                                string username, string channelName, bool success = true)
+                                string username, string channelName, bool success = true, ulong guildId = 0, string? guildName = null)
         {
             lock (_lock)
             {
@@ -212,6 +212,14 @@ namespace DongBot
                         cmdStats.ChannelExecutions[channelName]++;
                     }
 
+                    // Track guild executions
+                    if (guildId != 0)
+                    {
+                        if (!cmdStats.GuildExecutions.ContainsKey(guildId))
+                            cmdStats.GuildExecutions[guildId] = 0;
+                        cmdStats.GuildExecutions[guildId]++;
+                    }
+
                     int hour = now.Hour;
                     if (!cmdStats.HourlyDistribution.ContainsKey(hour))
                         cmdStats.HourlyDistribution[hour] = 0;
@@ -240,6 +248,14 @@ namespace DongBot
                         userStats.CommandCounts[commandName] = 0;
                     userStats.CommandCounts[commandName]++;
 
+                    // Track guild command counts for partitioned display
+                    if (guildId != 0)
+                    {
+                        if (!userStats.GuildCommandCounts.ContainsKey(guildId))
+                            userStats.GuildCommandCounts[guildId] = 0;
+                        userStats.GuildCommandCounts[guildId]++;
+                    }
+
                     // Channel-level statistics
                     if (!string.IsNullOrEmpty(channelName))
                     {
@@ -248,6 +264,9 @@ namespace DongBot
                             _statistics.Channels[channelName] = new ChannelStats
                             {
                                 ChannelName = channelName,
+                                ChannelId = 0,  // Will be populated if available
+                                GuildId = guildId,
+                                GuildName = guildName,
                                 TotalCommands = 0,
                                 CommandCounts = new Dictionary<string, int>(),
                                 ActiveUsers = new HashSet<string>()
@@ -255,6 +274,8 @@ namespace DongBot
                         }
 
                         ChannelStats channelStats = _statistics.Channels[channelName];
+                        channelStats.GuildId = guildId;  // Update guild info on each track
+                        channelStats.GuildName = guildName;
                         channelStats.TotalCommands++;
 
                         if (!channelStats.CommandCounts.ContainsKey(commandName))
@@ -293,8 +314,8 @@ namespace DongBot
             }
         }
 
-        /// <summary>Get top commands by usage.</summary>
-        public List<CommandStats> GetTopCommands(int count = 10, string? category = null)
+        /// <summary>Get top commands by usage, optionally filtered by guild.</summary>
+        public List<CommandStats> GetTopCommands(int count = 10, string? category = null, ulong? guildId = null)
         {
             lock (_lock)
             {
@@ -303,6 +324,9 @@ namespace DongBot
 
                 if (!string.IsNullOrEmpty(category))
                     commands = commands.Where(c => c.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
+
+                if (guildId.HasValue && guildId.Value != 0)
+                    commands = commands.Where(c => c.GuildExecutions.ContainsKey(guildId.Value));
 
                 return commands.Take(count).ToList();
             }
@@ -367,18 +391,28 @@ namespace DongBot
             }
         }
 
-        /// <summary>Get overall statistics summary.</summary>
-        public StatisticsSummary GetSummary()
+        /// <summary>Get overall statistics summary, optionally filtered by guild.</summary>
+        public StatisticsSummary GetSummary(ulong? guildId = null)
         {
             lock (_lock)
             {
-                int totalCommands = _statistics.Commands.Values.Sum(c => c.TotalExecutions);
+                IEnumerable<CommandStats> cmdValues = _statistics.Commands.Values;
+                IEnumerable<UserStats> userValues = _statistics.Users.Values;
+                IEnumerable<ChannelStats> channelValues = _statistics.Channels.Values;
 
-                CommandStats? mostUsedCommand = _statistics.Commands.Values
+                if (guildId.HasValue && guildId.Value != 0)
+                {
+                    cmdValues = cmdValues.Where(c => c.GuildExecutions.ContainsKey(guildId.Value));
+                    channelValues = channelValues.Where(ch => ch.GuildId == guildId.Value);
+                }
+
+                int totalCommands = cmdValues.Sum(c => c.TotalExecutions);
+
+                CommandStats? mostUsedCommand = cmdValues
                     .OrderByDescending(c => c.TotalExecutions)
                     .FirstOrDefault();
 
-                UserStats? mostActiveUser = _statistics.Users.Values
+                UserStats? mostActiveUser = userValues
                     .OrderByDescending(u => u.TotalCommands)
                     .FirstOrDefault();
 
@@ -390,9 +424,9 @@ namespace DongBot
                 return new StatisticsSummary
                 {
                     TotalCommands = totalCommands,
-                    TotalUniqueUsers = _statistics.Users.Count,
-                    TotalChannels = _statistics.Channels.Count,
-                    TotalCommandTypes = _statistics.Commands.Count,
+                    TotalUniqueUsers = userValues.Count(),
+                    TotalChannels = channelValues.Count(),
+                    TotalCommandTypes = cmdValues.Count(),
                     MostUsedCommand = mostUsedCommand?.CommandName,
                     MostUsedCommandCount = mostUsedCommand?.TotalExecutions ?? 0,
                     MostActiveUser = mostActiveUser?.Username,
@@ -422,6 +456,7 @@ namespace DongBot
         public DateTime LastUsed { get; set; }
         public Dictionary<string, int> UserExecutions { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> ChannelExecutions { get; set; } = new Dictionary<string, int>();
+        public Dictionary<ulong, int> GuildExecutions { get; set; } = new Dictionary<ulong, int>();
         public Dictionary<int, int> HourlyDistribution { get; set; } = new Dictionary<int, int>();
     }
 
@@ -431,6 +466,7 @@ namespace DongBot
         public string Username { get; set; } = string.Empty;
         public int TotalCommands { get; set; }
         public Dictionary<string, int> CommandCounts { get; set; } = new Dictionary<string, int>();
+        public Dictionary<ulong, int> GuildCommandCounts { get; set; } = new Dictionary<ulong, int>();
         public DateTime FirstSeen { get; set; }
         public DateTime LastSeen { get; set; }
     }
@@ -438,6 +474,9 @@ namespace DongBot
     public class ChannelStats
     {
         public string ChannelName { get; set; } = string.Empty;
+        public ulong ChannelId { get; set; }
+        public ulong GuildId { get; set; }
+        public string? GuildName { get; set; }
         public int TotalCommands { get; set; }
         public Dictionary<string, int> CommandCounts { get; set; } = new Dictionary<string, int>();
         public HashSet<string> ActiveUsers { get; set; } = new HashSet<string>();

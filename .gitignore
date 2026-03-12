@@ -10,8 +10,14 @@ DongBot/obj/Debug/net6.0/DongBot.csproj.AssemblyReference.cache
 token.txt
 **/token.txt
 
+# Bot runtime data
+bot_audit.json
+bot_statistics.json
+user_error_reports.json
+
 # Backup files
 gifcommands.backup.*.json
+backups/
 
 # Build outputs
 bin/
@@ -24,6 +30,7 @@ coverage.cobertura.xml
 
 # Visual Studio
 .vs/
+.vscode/
 *.user
 *.suo
 *.userosscache

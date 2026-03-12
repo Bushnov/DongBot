@@ -273,6 +273,32 @@ public class MainDongMessageHandlingTests
     }
 
     [Fact]
+    public void TryExtractReleaseNotesSections_LatestUsesHighestVersionWhenFileOrderIsWrong()
+    {
+        string markdown = "# Notes\n\n## v2.0.0 (2026-03-11)\nA\n\n## v2.0.2 (2026-03-13)\nC\n\n## v2.0.1 (2026-03-12)\nB";
+
+        bool latestOk = MainDong.TryExtractReleaseNotesSections(markdown, null, out string latestVersion, out string latestSection);
+
+        Assert.True(latestOk);
+        Assert.Equal("2.0.2", latestVersion);
+        Assert.Contains("C", latestSection);
+        Assert.DoesNotContain("A", latestSection);
+    }
+
+    [Fact]
+    public void TryExtractReleaseNotesSections_RangeReturnsNewestFirstWhenFileOrderIsWrong()
+    {
+        string markdown = "# Notes\n\n## v2.0.0 (2026-03-11)\nA\n\n## v2.0.2 (2026-03-13)\nC\n\n## v2.0.1 (2026-03-12)\nB";
+
+        bool rangeOk = MainDong.TryExtractReleaseNotesSections(markdown, "2.0.0-2.0.2", out string rangeVersion, out string rangeSection);
+
+        Assert.True(rangeOk);
+        Assert.Equal("2.0.0-2.0.2", rangeVersion);
+        Assert.True(rangeSection.IndexOf("C", StringComparison.Ordinal) < rangeSection.IndexOf("B", StringComparison.Ordinal));
+        Assert.True(rangeSection.IndexOf("B", StringComparison.Ordinal) < rangeSection.IndexOf("A", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void FormatReleaseNotesForDiscord_NormalizesHeaders()
     {
         string section = "## v2.0.0 (2026-03-11)\n### Highlights\n- Item";

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MLBStatsAPI.IDs;
 using MLBStatsAPI.Models;
@@ -23,6 +24,7 @@ namespace DongBot
         private readonly IEntityLookupService _entityLookupService;
         private const int BRAVES_TEAM_ID = TeamIds.AtlantaBraves;
         private const int NL_EAST_DIVISION_ID = DivisionIds.NLEast;
+        private const int MaxHistoricalFallbackYears = 6;
 
         public MLBCommandManager(
             IBravesSchedulerControl? bravesScheduler = null,
@@ -59,32 +61,32 @@ namespace DongBot
                 // Braves scheduler commands
                 if (upperCommand.Equals("BRAVES-SCHEDULER-STATUS"))
                 {
-                    return _bravesScheduler?.GetStatus() ?? "Scheduler not initialized.";
+                    return _bravesScheduler?.GetStatus(context.GuildId) ?? "Scheduler not initialized.";
                 }
 
                 if (upperCommand.Equals("BRAVES-SCHEDULER-ENABLE"))
                 {
-                    _bravesScheduler?.Enable();
-                    return "Braves scheduler enabled.";
+                    _bravesScheduler?.Enable(context.GuildId);
+                    return "Braves scheduler enabled for this server.";
                 }
 
                 if (upperCommand.Equals("BRAVES-SCHEDULER-DISABLE"))
                 {
-                    _bravesScheduler?.Disable();
-                    return "Braves scheduler disabled.";
+                    _bravesScheduler?.Disable(context.GuildId);
+                    return "Braves scheduler disabled for this server.";
                 }
 
                 if (upperCommand.Equals("BRAVES-SCHEDULER-TEST-DAILY"))
                 {
                     return _bravesScheduler != null
-                        ? await _bravesScheduler.TriggerDailyPost()
+                        ? await _bravesScheduler.TriggerDailyPost(context.GuildId)
                         : "Scheduler not initialized.";
                 }
 
                 if (upperCommand.Equals("BRAVES-SCHEDULER-TEST-WEEKLY"))
                 {
                     return _bravesScheduler != null
-                        ? await _bravesScheduler.TriggerWeeklyPost()
+                        ? await _bravesScheduler.TriggerWeeklyPost(context.GuildId)
                         : "Scheduler not initialized.";
                 }
 
@@ -285,7 +287,15 @@ namespace DongBot
                 season: currentYear
             );
 
-            if (standings?.Records == null || !standings.Records.Any())
+            StandingRecord? record = standings?.Records?.FirstOrDefault();
+
+            if (record == null)
+            {
+                standings = await TryGetHistoricalStandingsAsync(currentYear);
+                record = standings?.Records?.FirstOrDefault(IsNlEastRecord);
+            }
+
+            if (record == null)
             {
                 return "❌ Could not retrieve NL East standings.";
             }
@@ -296,7 +306,6 @@ namespace DongBot
             sb.AppendLine("Team                    W    L   GB   WCGB  Streak");
             sb.AppendLine("─────────────────────────────────────────────────────");
 
-            StandingRecord record = standings.Records.First();
             if (record.TeamRecords != null)
             {
                 foreach (TeamRecord team in record.TeamRecords)
@@ -423,6 +432,17 @@ namespace DongBot
                 }
 
                 Person player = playerInfo.People.First();
+
+                // Off-season: CurrentTeam may be null because the API returns sparse player data.
+                // Retry with historical seasons to recover the team association.
+                if (player.CurrentTeam == null)
+                {
+                    Person? historicalPlayer = await TryGetHistoricalPlayerAsync(match.PlayerId.Value, DateTime.UtcNow.Year);
+                    if (historicalPlayer?.CurrentTeam != null)
+                    {
+                        player = historicalPlayer;
+                    }
+                }
                 
                 // Get current season stats
                 int currentYear = DateTime.UtcNow.Year;
@@ -434,41 +454,46 @@ namespace DongBot
                 sb.AppendLine($"**Team:** {player.CurrentTeam?.Name ?? "N/A"}");
                 sb.AppendLine($"**Bats/Throws:** {player.BatSide?.Code ?? "?"}/{player.PitchHand?.Code ?? "?"}");
                 sb.AppendLine($"**Age:** {CalculateAge(player.BirthDate)} | **Height:** {player.Height ?? "N/A"} | **Weight:** {(player.Weight.HasValue ? player.Weight.Value + " lbs" : "N/A")}");
+                string? healthStatus = await GetPlayerHealthStatusAsync(player, currentYear);
+                if (!string.IsNullOrWhiteSpace(healthStatus))
+                {
+                    sb.AppendLine($"**Health:** {healthStatus}");
+                }
                 
                 // Display stats if available
                 if (stats?.Stats != null && stats.Stats.Any())
                 {
                     sb.AppendLine($"\n**{currentYear} Season Stats:**");
-                    foreach (StatGroup statGroup in stats.Stats)
-                    {
-                        if (statGroup.Splits != null && statGroup.Splits.Any())
-                        {
-                            StatSplit split = statGroup.Splits.First();
-                            PlayerStats? playerStats = split.Stat;
+                    StatSplit? split = stats.Stats
+                        .Where(group => group.Splits != null)
+                        .SelectMany(group => group.Splits)
+                        .FirstOrDefault(s => s?.Stat != null);
 
-                            if (playerStats != null)
-                            {
-                                // Check if batter or pitcher
-                                if (playerStats.AtBats.HasValue && playerStats.AtBats > 0)
-                                {
-                                    // Batting stats
-                                    sb.AppendLine("```");
-                                    sb.AppendLine($"AVG: {playerStats.Avg ?? ".000"} | OBP: {playerStats.Obp ?? ".000"} | SLG: {playerStats.Slg ?? ".000"}");
-                                    sb.AppendLine($"HR: {playerStats.HomeRuns ?? 0} | RBI: {playerStats.Rbi ?? 0} | R: {playerStats.Runs ?? 0}");
-                                    sb.AppendLine($"H: {playerStats.Hits ?? 0} | 2B: {playerStats.Doubles ?? 0} | 3B: {playerStats.Triples ?? 0}");
-                                    sb.AppendLine($"BB: {playerStats.BaseOnBalls ?? 0} | SO: {playerStats.StrikeOuts ?? 0}");
-                                    sb.AppendLine("```");
-                                }
-                                else if (playerStats.Wins.HasValue || playerStats.InningsPitched != null)
-                                {
-                                    // Pitching stats
-                                    sb.AppendLine("```");
-                                    sb.AppendLine($"W-L: {playerStats.Wins ?? 0}-{playerStats.Losses ?? 0} | ERA: {playerStats.Era ?? "-.--"}");
-                                    sb.AppendLine($"IP: {playerStats.InningsPitched ?? "0.0"} | SO: {playerStats.StrikeOuts ?? 0} | BB: {playerStats.BaseOnBalls ?? 0}");
-                                    sb.AppendLine($"WHIP: {playerStats.Whip ?? "-.--"} | BAA: {playerStats.Avg ?? ".---"}");
-                                    sb.AppendLine("```");
-                                }
-                            }
+                    if (split?.Stat != null)
+                    {
+                        PlayerStats playerStats = split.Stat;
+                        bool isShohei = IsShoheiOhtani(player.FullName);
+                        bool isPitcher = IsPitcher(player.PrimaryPosition, playerStats);
+                        bool showPitching = isPitcher || isShohei;
+                        bool showHitting = !isPitcher || isShohei;
+
+                        if (showHitting)
+                        {
+                            sb.AppendLine("```");
+                            sb.AppendLine($"AVG: {playerStats.Avg ?? ".000"} | OBP: {playerStats.Obp ?? ".000"} | SLG: {playerStats.Slg ?? ".000"}");
+                            sb.AppendLine($"HR: {playerStats.HomeRuns ?? 0} | RBI: {playerStats.Rbi ?? 0} | R: {playerStats.Runs ?? 0}");
+                            sb.AppendLine($"H: {playerStats.Hits ?? 0} | 2B: {playerStats.Doubles ?? 0} | 3B: {playerStats.Triples ?? 0}");
+                            sb.AppendLine($"BB: {playerStats.BaseOnBalls ?? 0} | SO: {playerStats.StrikeOuts ?? 0}");
+                            sb.AppendLine("```");
+                        }
+
+                        if (showPitching)
+                        {
+                            sb.AppendLine("```");
+                            sb.AppendLine($"W-L: {playerStats.Wins ?? 0}-{playerStats.Losses ?? 0} | ERA: {playerStats.Era ?? "-.--"}");
+                            sb.AppendLine($"IP: {playerStats.InningsPitched ?? "0.0"} | SO: {playerStats.StrikeOuts ?? 0} | BB: {playerStats.BaseOnBalls ?? 0}");
+                            sb.AppendLine($"WHIP: {playerStats.Whip ?? "-.--"} | BAA: {playerStats.Avg ?? ".---"}");
+                            sb.AppendLine("```");
                         }
                     }
                 }
@@ -529,6 +554,10 @@ namespace DongBot
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine($"⚾ **{match.ResolvedName ?? playerName} - {season} Season Stats**\n");
 
+                PeopleResponse? playerInfo = await _mlbClient.GetPersonAsync(match.PlayerId.Value);
+                Person? player = playerInfo?.People?.FirstOrDefault();
+                bool isShohei = IsShoheiOhtani(player?.FullName ?? match.ResolvedName ?? playerName);
+
                 foreach (StatGroup statGroup in stats.Stats)
                 {
                     if (statGroup.Splits != null && statGroup.Splits.Any())
@@ -542,30 +571,22 @@ namespace DongBot
                             sb.AppendLine($"**Team:** {teamName}");
                             sb.AppendLine($"**Games:** {playerStats.GamesPlayed ?? 0}");
 
-                            // Check if batter or pitcher
-                            if (playerStats.AtBats.HasValue && playerStats.AtBats > 0)
+                            bool isPitcher = IsPitcher(player?.PrimaryPosition, playerStats);
+                            bool showPitching = isPitcher || isShohei;
+                            bool showHitting = !isPitcher || isShohei;
+
+                            if (showHitting)
                             {
-                                // Batting stats
-                                sb.AppendLine("\n**Batting Stats:**");
-                                sb.AppendLine("```");
-                                sb.AppendLine($"AVG: {playerStats.Avg ?? ".000"}  OBP: {playerStats.Obp ?? ".000"}  SLG: {playerStats.Slg ?? ".000"}  OPS: {playerStats.Ops ?? ".000"}");
-                                sb.AppendLine($"AB: {playerStats.AtBats}  H: {playerStats.Hits ?? 0}  2B: {playerStats.Doubles ?? 0}  3B: {playerStats.Triples ?? 0}");
-                                sb.AppendLine($"HR: {playerStats.HomeRuns ?? 0}  RBI: {playerStats.Rbi ?? 0}  R: {playerStats.Runs ?? 0}");
-                                sb.AppendLine($"BB: {playerStats.BaseOnBalls ?? 0}  SO: {playerStats.StrikeOuts ?? 0}");
-                                sb.AppendLine($"SB: {playerStats.StolenBases ?? 0}  CS: {playerStats.CaughtStealing ?? 0}");
-                                sb.AppendLine("```");
+                                AppendBattingStats(sb, playerStats);
+                                AppendBaserunningStats(sb, playerStats);
                             }
-                            else if (playerStats.Wins.HasValue || playerStats.InningsPitched != null)
+
+                            if (showPitching)
                             {
-                                // Pitching stats
-                                sb.AppendLine("\n**Pitching Stats:**");
-                                sb.AppendLine("```");
-                                sb.AppendLine($"W-L: {playerStats.Wins ?? 0}-{playerStats.Losses ?? 0}  ERA: {playerStats.Era ?? "-.--"}  WHIP: {playerStats.Whip ?? "-.--"}");
-                                sb.AppendLine($"IP: {playerStats.InningsPitched ?? "0.0"}  H: {playerStats.Hits ?? 0}  R: {playerStats.Runs ?? 0}  ER: {playerStats.EarnedRuns ?? 0}");
-                                sb.AppendLine($"SO: {playerStats.StrikeOuts ?? 0}  BB: {playerStats.BaseOnBalls ?? 0}  HR: {playerStats.HomeRuns ?? 0}");
-                                sb.AppendLine($"BAA: {playerStats.Avg ?? ".---"}  SV: {playerStats.Saves ?? 0}");
-                                sb.AppendLine("```");
+                                AppendPitchingStats(sb, playerStats);
                             }
+
+                            AppendFieldingStats(sb, playerStats);
                         }
                     }
                 }
@@ -592,6 +613,294 @@ namespace DongBot
             int age = today.Year - birth.Year;
             if (birth.Date > today.AddYears(-age)) age--;
             return age;
+        }
+
+        private static bool IsShoheiOhtani(string? name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return false;
+            }
+
+            return name.Contains("Shohei Ohtani", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsPitcher(Position? primaryPosition, PlayerStats playerStats)
+        {
+            string positionCode = primaryPosition?.Code ?? string.Empty;
+            string positionAbbreviation = primaryPosition?.Abbreviation ?? string.Empty;
+            string positionType = primaryPosition?.Type ?? string.Empty;
+            string positionName = primaryPosition?.Name ?? string.Empty;
+
+            if (positionCode.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                positionAbbreviation.Equals("P", StringComparison.OrdinalIgnoreCase) ||
+                positionType.Equals("Pitcher", StringComparison.OrdinalIgnoreCase) ||
+                positionName.Equals("Pitcher", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            bool hasPitchingIndicators = !string.IsNullOrWhiteSpace(playerStats.InningsPitched) ||
+                                         playerStats.GamesPitched.GetValueOrDefault() > 0 ||
+                                         playerStats.Wins.HasValue ||
+                                         playerStats.Era != null;
+            bool hasHittingIndicators = playerStats.AtBats.GetValueOrDefault() > 0 ||
+                                        playerStats.PlateAppearances.GetValueOrDefault() > 0;
+
+            return hasPitchingIndicators && !hasHittingIndicators;
+        }
+
+        private void AppendBattingStats(StringBuilder sb, PlayerStats playerStats)
+        {
+            sb.AppendLine("\n**Batting Stats:**");
+            sb.AppendLine("```");
+            sb.AppendLine($"AVG: {playerStats.Avg ?? ".000"}  OBP: {playerStats.Obp ?? ".000"}  SLG: {playerStats.Slg ?? ".000"}  OPS: {playerStats.Ops ?? ".000"}");
+            sb.AppendLine($"AB: {playerStats.AtBats ?? 0}  H: {playerStats.Hits ?? 0}  2B: {playerStats.Doubles ?? 0}  3B: {playerStats.Triples ?? 0}");
+            sb.AppendLine($"HR: {playerStats.HomeRuns ?? 0}  RBI: {playerStats.Rbi ?? 0}  R: {playerStats.Runs ?? 0}");
+            sb.AppendLine($"BB: {playerStats.BaseOnBalls ?? 0}  SO: {playerStats.StrikeOuts ?? 0}");
+            sb.AppendLine("```");
+        }
+
+        private void AppendBaserunningStats(StringBuilder sb, PlayerStats playerStats)
+        {
+            sb.AppendLine("\n**Baserunning Stats:**");
+            sb.AppendLine("```");
+            sb.AppendLine($"SB: {playerStats.StolenBases ?? 0}  CS: {playerStats.CaughtStealing ?? 0}  SB%: {playerStats.StolenBasePercentage ?? "-.---"}");
+            sb.AppendLine("```");
+        }
+
+        private void AppendPitchingStats(StringBuilder sb, PlayerStats playerStats)
+        {
+            sb.AppendLine("\n**Pitching Stats:**");
+            sb.AppendLine("```");
+            sb.AppendLine($"W-L: {playerStats.Wins ?? 0}-{playerStats.Losses ?? 0}  ERA: {playerStats.Era ?? "-.--"}  WHIP: {playerStats.Whip ?? "-.--"}");
+            sb.AppendLine($"IP: {playerStats.InningsPitched ?? "0.0"}  H: {playerStats.Hits ?? 0}  R: {playerStats.Runs ?? 0}  ER: {playerStats.EarnedRuns ?? 0}");
+            sb.AppendLine($"SO: {playerStats.StrikeOuts ?? 0}  BB: {playerStats.BaseOnBalls ?? 0}  HR: {playerStats.HomeRuns ?? 0}");
+            sb.AppendLine($"BAA: {playerStats.Avg ?? ".---"}  SV: {playerStats.Saves ?? 0}");
+            sb.AppendLine("```");
+        }
+
+        private void AppendFieldingStats(StringBuilder sb, PlayerStats playerStats)
+        {
+            sb.AppendLine("\n**Fielding Stats:**");
+            sb.AppendLine("```");
+            sb.AppendLine($"A: {playerStats.Assists ?? 0}  PO: {playerStats.PutOuts ?? 0}  E: {playerStats.Errors ?? 0}");
+            sb.AppendLine($"FPCT: {playerStats.FieldingPercentage ?? ".000"}  CH: {playerStats.Chances ?? 0}  DP: {playerStats.DoublePlays ?? 0}");
+            sb.AppendLine("```");
+        }
+
+        private async Task<string?> GetPlayerHealthStatusAsync(Person player, int season)
+        {
+            if (player.CurrentTeam?.Id is not int teamId || player.Id <= 0)
+            {
+                return player.Active == true ? "Healthy" : null;
+            }
+
+            int playerId = player.Id;
+
+            string? rosterStatus = await TryGetRosterStatusDescriptionAsync(teamId, season, playerId, "active")
+                                   ?? await TryGetRosterStatusDescriptionAsync(teamId, season, playerId, "fullSeason")
+                                   ?? await TryGetRosterStatusDescriptionAsync(teamId, season, playerId, "40Man");
+
+            if (!string.IsNullOrWhiteSpace(rosterStatus))
+            {
+                return rosterStatus;
+            }
+
+            return player.Active == true ? "Healthy" : null;
+        }
+
+        private async Task<string?> TryGetRosterStatusDescriptionAsync(int teamId, int season, int playerId, string rosterType)
+        {
+            try
+            {
+                string rosterJson = await _mlbClient.GetRosterAsync(teamId: teamId, season: season, rosterType: rosterType);
+                using JsonDocument rosterDoc = JsonDocument.Parse(rosterJson);
+
+                if (!rosterDoc.RootElement.TryGetProperty("roster", out JsonElement rosterArray) || rosterArray.ValueKind != JsonValueKind.Array)
+                {
+                    return null;
+                }
+
+                foreach (JsonElement playerElement in rosterArray.EnumerateArray())
+                {
+                    if (!playerElement.TryGetProperty("person", out JsonElement personElement) ||
+                        !personElement.TryGetProperty("id", out JsonElement idElement) ||
+                        idElement.GetInt32() != playerId)
+                    {
+                        continue;
+                    }
+
+                    if (!playerElement.TryGetProperty("status", out JsonElement statusElement))
+                    {
+                        return null;
+                    }
+
+                    if (statusElement.TryGetProperty("description", out JsonElement descriptionElement))
+                    {
+                        string? rawDescription = descriptionElement.GetString();
+                        if (!string.IsNullOrWhiteSpace(rawDescription))
+                        {
+                            return NormalizeStatus(rawDescription);
+                        }
+                    }
+
+                    if (statusElement.TryGetProperty("code", out JsonElement codeElement))
+                    {
+                        string? code = codeElement.GetString();
+                        if (!string.IsNullOrWhiteSpace(code))
+                        {
+                            return NormalizeStatus(code);
+                        }
+                    }
+
+                    return null;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
+
+        private static string NormalizeStatus(string status)
+        {
+            string normalized = status.Trim().Replace("_", " ");
+            if (normalized.Equals("A", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals("Active", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Healthy";
+            }
+
+            return Regex.Replace(normalized, "\\s+", " ");
+        }
+
+        private async Task<StandingsResponse?> TryGetHistoricalStandingsAsync(int currentYear)
+        {
+            int[] divisionIds =
+            {
+                DivisionIds.ALWest,
+                DivisionIds.ALEast,
+                DivisionIds.ALCentral,
+                DivisionIds.NLWest,
+                DivisionIds.NLEast,
+                DivisionIds.NLCentral
+            };
+
+            for (int season = currentYear - 1; season >= currentYear - MaxHistoricalFallbackYears; season--)
+            {
+                List<StandingRecord> divisionRecords = new();
+                foreach (int divisionId in divisionIds)
+                {
+                    StandingsResponse? division = await _mlbClient.GetDivisionStandingsAsync(divisionId, season);
+                    if (division?.Records != null && division.Records.Any())
+                    {
+                        divisionRecords.AddRange(division.Records);
+                    }
+                }
+
+                if (divisionRecords.Any())
+                {
+                    return new StandingsResponse
+                    {
+                        Records = divisionRecords
+                    };
+                }
+
+                StandingsResponse? al = await _mlbClient.GetStandingsAsync(103, season);
+                StandingsResponse? nl = await _mlbClient.GetStandingsAsync(104, season);
+
+                List<StandingRecord> records = new();
+                if (al?.Records != null && al.Records.Any())
+                {
+                    records.AddRange(al.Records);
+                }
+
+                if (nl?.Records != null && nl.Records.Any())
+                {
+                    records.AddRange(nl.Records);
+                }
+
+                if (records.Any())
+                {
+                    return new StandingsResponse
+                    {
+                        Records = records
+                    };
+                }
+            }
+
+            return null;
+        }
+
+        private static bool IsNlEastRecord(StandingRecord record)
+        {
+            if (record.Division?.Id == NL_EAST_DIVISION_ID)
+            {
+                return true;
+            }
+
+            string divisionName = record.Division?.Name ?? string.Empty;
+            return divisionName.Contains("NL East", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string FormatDivisionName(string? rawDivisionName)
+        {
+            if (string.IsNullOrWhiteSpace(rawDivisionName))
+            {
+                return "Unknown";
+            }
+
+            return rawDivisionName
+                .Replace("American League", "AL", StringComparison.OrdinalIgnoreCase)
+                .Replace("National League", "NL", StringComparison.OrdinalIgnoreCase)
+                .Trim();
+        }
+
+        private async Task<StandingsResponse?> TryGetHistoricalDivisionStandingsAsync(int divisionId, int currentYear)
+        {
+            for (int season = currentYear - 1; season >= currentYear - MaxHistoricalFallbackYears; season--)
+            {
+                StandingsResponse? candidate = await _mlbClient.GetDivisionStandingsAsync(divisionId, season);
+                if (candidate?.Records != null && candidate.Records.Any())
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private async Task<Team?> TryGetHistoricalTeamAsync(int teamId, int currentYear)
+        {
+            for (int season = currentYear - 1; season >= currentYear - MaxHistoricalFallbackYears; season--)
+            {
+                TeamsResponse? historical = await _mlbClient.GetTeamsAsync(SportIds.MLB, season: season);
+                Team? candidate = historical?.Teams?.FirstOrDefault(t => t.Id == teamId);
+                if (candidate?.Division != null)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private async Task<Person?> TryGetHistoricalPlayerAsync(int playerId, int currentYear)
+        {
+            for (int season = currentYear - 1; season >= currentYear - MaxHistoricalFallbackYears; season--)
+            {
+                PeopleResponse? historical = await _mlbClient.GetPersonAsync(playerId, season: season);
+                Person? candidate = historical?.People?.FirstOrDefault();
+                if (candidate?.CurrentTeam != null)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
         }
 
         #endregion
@@ -692,8 +1001,13 @@ namespace DongBot
         {
             string[] parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             
-            // Default to current standings
+            int currentYear = DateTime.UtcNow.Year;
             StandingsResponse? standings = await _mlbClient.GetCurrentStandingsAsync();
+
+            if (standings?.Records == null || !standings.Records.Any())
+            {
+                standings = await TryGetHistoricalStandingsAsync(currentYear);
+            }
 
             if (standings?.Records == null || !standings.Records.Any())
             {
@@ -707,7 +1021,7 @@ namespace DongBot
 
             foreach (StandingRecord record in standings.Records)
             {
-                string divisionName = record.Division?.Name ?? "Unknown";
+                string divisionName = FormatDivisionName(record.Division?.Name);
                 
                 if (!_standingsFilterService.RecordMatches(record, filter))
                 {
@@ -767,6 +1081,17 @@ namespace DongBot
             if (team == null)
             {
                 return $"❌ Team not found: {string.Join(" ", parts.Skip(1))}";
+            }
+
+            // Off-season: team.Division (and sometimes League) may be null because the no-season
+            // API response is sparse. Retry with historical seasons to enrich the team object.
+            if (team.Division == null)
+            {
+                Team? enriched = await TryGetHistoricalTeamAsync(team.Id, DateTime.UtcNow.Year);
+                if (enriched?.Division != null)
+                {
+                    team = enriched;
+                }
             }
 
             StringBuilder sb = new StringBuilder();

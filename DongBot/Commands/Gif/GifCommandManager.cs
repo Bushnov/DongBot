@@ -57,7 +57,7 @@ namespace DongBot
             string result = _gifService.ProcessCommand(command, context.ChannelName, context.ChannelId);
             if (!string.IsNullOrEmpty(result))
             {
-                _statisticsTracker.TrackCommand(command.ToUpperInvariant(), "GIF", context.UserId, context.Username, context.ChannelName, true);
+                _statisticsTracker.TrackCommand(command.ToUpperInvariant(), "GIF", context.UserId, context.Username, context.ChannelName, true, context.GuildId, context.GuildName);
             }
 
             return Task.FromResult(result);

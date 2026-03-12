@@ -4,14 +4,17 @@ using System.Threading.Tasks;
 namespace DongBot
 {
     /// <summary>
-    /// Contextual information about the Discord message that triggered a command
+    /// Contextual information about the Discord message that triggered a command.
+    /// Includes guild/server information to enable server-specific operations and tracking.
     /// </summary>
     public record CommandContext(
         string ChannelName,
         ulong ChannelId,
         bool IsAdminChannel,
         string UserId,
-        string Username
+        string Username,
+        ulong GuildId = 0,
+        string GuildName = ""
     );
 
     /// <summary>
