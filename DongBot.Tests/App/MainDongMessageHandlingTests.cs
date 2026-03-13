@@ -83,6 +83,25 @@ public class MainDongMessageHandlingTests
     }
 
     [Fact]
+    public async Task SendChunkedAsync_NormalizesCrLfWithoutAddingExtraBlankLines()
+    {
+        List<string> sent = new();
+        string payload = string.Join("\r\n", Enumerable.Repeat("line", 300));
+
+        await MainDong.SendChunkedAsync(
+            message =>
+            {
+                sent.Add(message);
+                return Task.CompletedTask;
+            },
+            payload,
+            maxLength: 200);
+
+        Assert.True(sent.Count > 1);
+        Assert.All(sent, chunk => Assert.DoesNotContain("\r\r\n", chunk));
+    }
+
+    [Fact]
     public async Task SendChunkedAsync_SplitsSingleOverlongLine()
     {
         List<string> sent = new();
@@ -301,7 +320,7 @@ public class MainDongMessageHandlingTests
     [Fact]
     public void FormatReleaseNotesForDiscord_NormalizesHeaders()
     {
-        string section = "## v2.0.0 (2026-03-11)\n### Highlights\n- Item";
+        string section = "\n\n## v2.0.0 (2026-03-11)\n\n### Highlights\n\n- Item\n\n";
 
         string formatted = MainDong.FormatReleaseNotesForDiscord(section, "2.0.0");
 
@@ -309,6 +328,8 @@ public class MainDongMessageHandlingTests
         Assert.Contains("**v2.0.0 (2026-03-11)**", formatted);
         Assert.Contains("**Highlights**", formatted);
         Assert.Contains("- Item", formatted);
+        Assert.DoesNotContain("\n\n\n", formatted);
+        Assert.DoesNotContain("\n\n**v2.0.0 (2026-03-11)**", formatted);
     }
 
     private sealed class StubCommandManager : ICommandManager

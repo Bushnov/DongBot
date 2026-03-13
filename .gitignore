@@ -43,3 +43,9 @@ coverage.cobertura.xml
 # Rider
 .idea/
 *.sln.iml
+bot_audit.json
+bot_statistics.json
+user_error_reports.json
+.vscode/tasks.json
+.vscode/launch.json
+DongBot/obj/project.nuget.cache

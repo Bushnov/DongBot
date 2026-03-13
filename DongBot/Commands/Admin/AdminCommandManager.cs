@@ -91,7 +91,7 @@ namespace DongBot
             sb.AppendLine("!audit [limit] - Show recent audit log entries");
             sb.AppendLine("!audit-stats - Show audit statistics");
             sb.AppendLine("!badbot-list [N] - Show recent user error reports");
-            sb.AppendLine("!release-notes [version|range] - Post user release notes to #dongdot");
+            sb.AppendLine("!release-notes [version|range] - Post user release notes to #dongbot");
             sb.AppendLine("!stats - Show overall bot statistics");
             sb.AppendLine("!stats-top [N] - Show top N commands");
             sb.AppendLine("!stats-user [USER_ID] - Show user statistics");
