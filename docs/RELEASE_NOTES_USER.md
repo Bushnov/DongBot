@@ -1,5 +1,20 @@
 # DongBot User Release Notes
 
+## v2.0.3 (2026-03-27)
+
+### Highlights
+- 
+
+### Improvements
+- 
+
+### Fixes
+- 
+
+---
+
+
+
 Audience: all Discord users of DongBot commands.
 
 ## v2.0.1 (2026-03-12)

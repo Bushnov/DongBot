@@ -5,7 +5,7 @@
   },
   "projects": {
     "C:\\src\\DongBot\\DongBot\\DongBot.csproj": {
-      "version": "2.0.2",
+      "version": "2.0.3",
       "restore": {
         "projectUniqueName": "C:\\src\\DongBot\\DongBot\\DongBot.csproj",
         "projectName": "DongBot",
