@@ -1,5 +1,18 @@
 # DongBot Internal Changelog
 
+## 2.0.3 - 2026-03-27
+
+### Added
+- 
+
+### Changed
+- 
+
+### Fixed
+- 
+
+
+
 Detailed, developer-oriented release history.
 
 ## 2.0.1 - 2026-03-12

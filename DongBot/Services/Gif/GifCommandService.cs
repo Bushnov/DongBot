@@ -16,6 +16,7 @@ namespace DongBot
         private readonly BackupManager _backupManager;
         private GifCommandData _data = new GifCommandData();
         private readonly Dictionary<string, string> _aliasLookup = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _lastGifPerCommand = new Dictionary<string, string>();
 
         public GifCommandService(string filePath = "gifcommands.json")
         {
@@ -84,7 +85,9 @@ namespace DongBot
 
                     if (aliasCommand.Gifs.Count > 0)
                     {
-                        return aliasCommand.Gifs[_random.Next(aliasCommand.Gifs.Count)];
+                        string selectedGif = GetDifferentGif(primaryCommandKey, aliasCommand.Gifs);
+                        _lastGifPerCommand[primaryCommandKey] = selectedGif;
+                        return selectedGif;
                     }
                 }
 
@@ -116,12 +119,45 @@ namespace DongBot
 
                     if (matches && command.Gifs.Count > 0)
                     {
-                        return command.Gifs[_random.Next(command.Gifs.Count)];
+                        string selectedGif = GetDifferentGif(kvp.Key, command.Gifs);
+                        _lastGifPerCommand[kvp.Key] = selectedGif;
+                        return selectedGif;
                     }
                 }
             }
 
             return string.Empty;
+        }
+
+        private string GetDifferentGif(string commandKey, List<string> gifs)
+        {
+            // If there's only one gif, always return it
+            if (gifs.Count == 1)
+            {
+                return gifs[0];
+            }
+
+            // Get the last gif sent for this command, if any
+            _lastGifPerCommand.TryGetValue(commandKey, out string? lastGif);
+
+            // If no previous gif was sent, just return a random one
+            if (string.IsNullOrEmpty(lastGif))
+            {
+                return gifs[_random.Next(gifs.Count)];
+            }
+
+            // Keep trying until we find a gif different from the last one
+            string selectedGif;
+            int maxAttempts = gifs.Count * 2; // Prevent infinite loops
+            int attempts = 0;
+
+            do
+            {
+                selectedGif = gifs[_random.Next(gifs.Count)];
+                attempts++;
+            } while (selectedGif == lastGif && attempts < maxAttempts);
+
+            return selectedGif;
         }
 
         public List<GifCommandDisplayInfo> GetAvailableCommands(string channelName, ulong channelId)
