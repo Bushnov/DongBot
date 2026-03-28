@@ -10,8 +10,11 @@
         "https://media.giphy.com/media/LrR8lk4mjCRhZKLAfk/giphy.gif",
         "https://media.giphy.com/media/HAd2zDwqOa5MY/giphy.gif",
         "https://tenor.com/r7Hq.gif",
-        "https://media1.tenor.com/images/cde146841a3bb1992d494c6f3897318e/tenor.gif?itemid=7307130"
-      ]
+        "https://media1.tenor.com/images/cde146841a3bb1992d494c6f3897318e/tenor.gif?itemid=7307130",
+        "https://cdn.discordapp.com/attachments/373948312090443779/1480723215319044106/IMG_7069.gif?ex=69b553b5\u0026is=69b40235\u0026hm=e6709d26975488c56216b5e93315678aae9c1c5a51618e4720e74bb43dc3f99a"
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "DING": {
       "channel": "baseball",
@@ -26,7 +29,9 @@
         "https://tenor.com/view/ring-bell-dog-cute-seeking-attention-ding-gif-13497885",
         "https://tenor.com/view/ringthatbell-vs-gbell-ding-ding-the-bell-gif-14783578",
         "https://giphy.com/gifs/KiaundraJackson-noise-ding-kiaundra-jackson-hdP8JpVJXMTGvazIlx"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "GAMEDAY": {
       "channel": "college-sports",
@@ -39,7 +44,9 @@
         "https://media.giphy.com/media/fS3lHlhqJZ5FWa0EiO/giphy.gif",
         "https://media.giphy.com/media/l2ZE8NaNqzz8W05JC/giphy.gif",
         "https://media.giphy.com/media/Xa4eNNMfkNfihYG0ab/giphy.gif"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "DUMPSTERFIRE": {
       "channel": "",
@@ -52,20 +59,24 @@
         "https://media4.giphy.com/media/Jrl4FlTaymFFbNiwU5/giphy.gif",
         "https://reactions.gifs.ninja/r/d942fb461b07fde1dc08.gif",
         "https://media1.giphy.com/media/yfEjNtvqFBfTa/200w.gif"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "GUZ": {
       "channel": "mls",
-      "pattern": "GU+Z$",
+      "pattern": "GU\u002BZ$",
       "isRegex": true,
       "gifs": [
         "https://imgur.com/gallery/gGKKfEb?nc=1",
-        "https://images.photowall.com/products/58209/shades-of-red-brick-wall.jpg?h=699&q=85",
+        "https://images.photowall.com/products/58209/shades-of-red-brick-wall.jpg?h=699\u0026q=85",
         "https://giphy.com/gifs/mashable-26xBFb8wtN5R0iyAM",
         "https://d3hne3c382ip58.cloudfront.net/files/uploads/bookmundi/resized/cmsfeatured/visiting-the-great-wall-of-china-featured-image-1560845062-785X440.jpg",
         "https://upload.wikimedia.org/wikipedia/en/1/13/PinkFloydWallCoverOriginalNoText.jpg",
         "https://i0.wp.com/24.media.tumblr.com/5c78051b1c751172d691c1c1fa3389db/tumblr_mi5w2kcVjk1rjrvmvo7_250.gif?resize=245%2C245"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "BOOP": {
       "channel": "baseball",
@@ -79,7 +90,9 @@
         "https://tenor.com/view/archer-fx-boop-adam-reed-nose-gif-4228661",
         "https://tenor.com/view/boop-et-extra-terrestrial-gif-12066576",
         "https://tenor.com/view/boop-boopboopboop-bestfriends-superbad-gif-5041988"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "NOICE": {
       "channel": "",
@@ -88,7 +101,9 @@
       "gifs": [
         "https://tenor.com/view/nice-nooice-bling-key-and-peele-gif-4294979",
         "https://tenor.com/view/noice-brooklyn-ninenine-b99-smile-gif-11928987"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "MYMAN": {
       "channel": "",
@@ -102,15 +117,19 @@
         "https://tenor.com/view/myman-rickandmorty-gif-5032364",
         "https://tenor.com/view/myman-fistbump-gif-5032427",
         "https://tenor.com/view/my-man-my-main-man-nathaniel-taylor-rollo-larson-sanford-and-son-thats-my-boy-gif-17869407"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "DUVALL": {
       "channel": "baseball",
-      "pattern": "DU+V+A+L+$",
+      "pattern": "DU\u002BV\u002BA\u002BL\u002B$",
       "isRegex": true,
       "gifs": [
         "https://cdn.discordapp.com/attachments/493515081506750485/965421908512350238/ezgif-3-eb8cd00053.gif"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "JIGGY": {
       "channel": "baseball",
@@ -118,7 +137,9 @@
       "isRegex": false,
       "gifs": [
         "https://www.youtube.com/watch?v=3JcmQONgXJM"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "DONGER": {
       "channel": "baseball",
@@ -129,7 +150,9 @@
         "https://tenor.com/view/donkey-kong-intensify-shaking-gif-14723368",
         "https://tenor.com/view/its-huge-sup-joseph-donovan-hudson-and-rex-large-big-gif-23978872",
         "https://tenor.com/view/donger-thats-a-donger-slade-bulge-gif-13294282"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "DONGEST": {
       "channel": "baseball",
@@ -138,7 +161,9 @@
       "gifs": [
         "https://tenor.com/view/dong-dongs-gif-18220383",
         "https://tenor.com/view/fake-penis-morph-gif-13172581"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "SALAMI": {
       "channel": "baseball",
@@ -149,7 +174,9 @@
         "https://tenor.com/view/embarrassed-panda-oh-god-holy-salami-hide-face-gif-17443872",
         "https://giphy.com/gifs/splat-nicksplat-rockos-modern-life-l4EpkZThLWJrqkfVm",
         "https://giphy.com/gifs/Marcher-at-salami-wurst-loidl-QxApjrdi9RjgpbQVeB"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "SWEEP": {
       "channel": "baseball",
@@ -160,7 +187,9 @@
         "https://tenor.com/view/sweeping-cleaning-mopping-mr-clean-gif-17663331",
         "https://tenor.com/view/broom-sweep-patrick-fail-stupid-gif-5417128",
         "https://tenor.com/view/sweep-padres-gif-22851806"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "WASH": {
       "channel": "baseball",
@@ -175,7 +204,9 @@
         "https://giphy.com/gifs/mlb-sports-ron-washington-send-em-kIJsORuundDCPkzv9o",
         "https://giphy.com/gifs/mlb-sports-baseball-joc-pederson-x0qVkQfe69H4g06lyT",
         "https://giphy.com/gifs/mlb-laughing-washington-ron-h2UDgOSXdLqRN7E7h9"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "WINDMILL": {
       "channel": "baseball",
@@ -190,11 +221,13 @@
         "https://giphy.com/gifs/mlb-sports-ron-washington-send-em-kIJsORuundDCPkzv9o",
         "https://giphy.com/gifs/mlb-sports-baseball-joc-pederson-x0qVkQfe69H4g06lyT",
         "https://giphy.com/gifs/mlb-laughing-washington-ron-h2UDgOSXdLqRN7E7h9"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "THICC": {
       "channel": "baseball",
-      "pattern": "THICC+$",
+      "pattern": "THICC\u002B$",
       "isRegex": true,
       "gifs": [
         "https://tenor.com/view/extra-thicc-extra-thick-thicc-thick-aku-gif-21813785",
@@ -206,7 +239,9 @@
         "https://giphy.com/gifs/hyperrpg-twitch-rat-queens-ratqueens-kcOVt7d7hcUVkADVS1",
         "https://giphy.com/gifs/vh1-26BRvneVlfR2MMyuQ",
         "https://giphy.com/gifs/daveonfxx-thicc-thiccness-advanced-3tK0Yo2rs1nkSqUq9m"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "TOOT": {
       "channel": "baseball",
@@ -218,7 +253,9 @@
         "https://tenor.com/view/jake-peralta-brooklyn-nine-nine-nbc-toot-b99-gif-16001901",
         "https://tenor.com/view/jake-peralta-brooklyn-nine-nine-nbc-toot-b99-gif-16001901",
         "https://giphy.com/gifs/drunkhistory-comedy-central-drunk-history-IeG3YafCD9Drk2y3ZB"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "DINGDINGDING": {
       "channel": "baseball",
@@ -230,7 +267,9 @@
         "https://tenor.com/view/better-call-saul-don-eladio-gif-26390716",
         "https://giphy.com/gifs/survivorau-survivor-kgrCxsTQFj0HAh2TUG",
         "https://giphy.com/gifs/clawstnt-bryce-uncle-daddy-quiet-ann-rqMxQEZlney9bsVGtH"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     },
     "MOLSON": {
       "channel": "baseball",
@@ -241,7 +280,9 @@
         "https://tenor.com/view/beer-labatts-beer-canadian-beer-schooner-beer-boddingtons-beer-gif-20482782",
         "https://giphy.com/gifs/workaholics-comedy-central-season-2-episode-9-l0ErOxnmLuj9pMIvu",
         "https://giphy.com/gifs/MacGruber-macgruber-show-series-v0SoH4cES4qJ77PaTi"
-      ]
+      ],
+      "aliases": [],
+      "allowedChannels": null
     }
   }
 }
